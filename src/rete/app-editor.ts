@@ -71,10 +71,10 @@ export class DataSplitNode extends TradeNode {
     constructor() {
         super('데이터 분할')
         this.addInput('data', new ClassicPreset.Input(numberSocket, '데이터'))
-        this.addOutput('X_train', new ClassicPreset.Output(numberSocket, 'X_훈련'))
-        this.addOutput('y_train', new ClassicPreset.Output(numberSocket, 'y_훈련'))
-        this.addOutput('X_test', new ClassicPreset.Output(numberSocket, 'X_테스트'))
-        this.addOutput('y_test', new ClassicPreset.Output(numberSocket, 'y_테스트'))
+        this.addOutput('X_train', new ClassicPreset.Output(numberSocket, 'X_train'))
+        this.addOutput('y_train', new ClassicPreset.Output(numberSocket, 'Y_train'))
+        this.addOutput('X_test', new ClassicPreset.Output(numberSocket, 'X_test'))
+        this.addOutput('y_test', new ClassicPreset.Output(numberSocket, 'Y_test'))
         this.addControl('targetColumn', new ClassicPreset.InputControl('text', { initial: 'target' }))
         this.addControl('ratio', new ClassicPreset.InputControl('number', { initial: 0.8 }))
         this.kind = 'dataSplit'
@@ -112,8 +112,8 @@ export class FeatureSelectionNode extends TradeNode {
 export class ClassifierNode extends TradeNode {
     constructor() {
         super('분류기')
-        this.addInput('X_train', new ClassicPreset.Input(numberSocket, 'X_훈련'))
-        this.addInput('y_train', new ClassicPreset.Input(numberSocket, 'y_훈련'))
+        this.addInput('X_train', new ClassicPreset.Input(numberSocket, 'X_train'))
+        this.addInput('Y_train', new ClassicPreset.Input(numberSocket, 'Y_train'))
         this.addOutput('model', new ClassicPreset.Output(numberSocket, '모델'))
         this.addControl('algorithm', new ClassicPreset.InputControl('text', { initial: 'RandomForest' }))
         this.addControl('n_estimators', new ClassicPreset.InputControl('number', { initial: 100 }))
@@ -125,8 +125,8 @@ export class ClassifierNode extends TradeNode {
 export class RegressorNode extends TradeNode {
     constructor() {
         super('회귀')
-        this.addInput('X_train', new ClassicPreset.Input(numberSocket, 'X_훈련'))
-        this.addInput('y_train', new ClassicPreset.Input(numberSocket, 'y_훈련'))
+        this.addInput('X_train', new ClassicPreset.Input(numberSocket, 'X_train'))
+        this.addInput('Y_train', new ClassicPreset.Input(numberSocket, 'Y_train'))
         this.addOutput('model', new ClassicPreset.Output(numberSocket, '모델'))
         this.addControl('algorithm', new ClassicPreset.InputControl('text', { initial: 'LinearRegression' }))
         this.kind = 'regressor'
@@ -137,8 +137,8 @@ export class RegressorNode extends TradeNode {
 export class NeuralNetNode extends TradeNode {
     constructor() {
         super('신경망')
-        this.addInput('X_train', new ClassicPreset.Input(numberSocket, 'X_훈련'))
-        this.addInput('y_train', new ClassicPreset.Input(numberSocket, 'y_훈련'))
+        this.addInput('X_train', new ClassicPreset.Input(numberSocket, 'X_train'))
+        this.addInput('Y_train', new ClassicPreset.Input(numberSocket, 'Y_train'))
         this.addOutput('model', new ClassicPreset.Output(numberSocket, '모델'))
         this.addControl('layers', new ClassicPreset.InputControl('text', { initial: '64,32' }))
         this.addControl('epochs', new ClassicPreset.InputControl('number', { initial: 50 }))
@@ -151,9 +151,8 @@ export class EvaluateNode extends TradeNode {
     constructor() {
         super('평가')
         this.addInput('model', new ClassicPreset.Input(numberSocket, '모델'))
-        this.addInput('X_test', new ClassicPreset.Input(numberSocket, 'X_테스트'))
-        this.addInput('y_test', new ClassicPreset.Input(numberSocket, 'y_테스트'))
-        this.addOutput('metrics', new ClassicPreset.Output(numberSocket, '지표'))
+        this.addInput('X_test', new ClassicPreset.Input(numberSocket, 'X_test'))
+        this.addInput('Y_test', new ClassicPreset.Input(numberSocket, 'Y_test'))
         this.kind = 'evaluate'
         this.category = 'ml-evaluation'
     }

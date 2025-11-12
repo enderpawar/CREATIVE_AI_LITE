@@ -14,12 +14,9 @@ const LogicEditorPage = ({ selectedLogicId, onBack, onSave, defaultNewLogicName 
     const toast = useToast();
     const [logic, setLogic] = useState(null);
     const [logicName, setLogicName] = useState('');
-    const buyCanvasRef = useRef(null);
-    const sellCanvasRef = useRef(null);
+    const canvasRef = useRef(null);
     const [theme, setTheme] = useState('dark');
-    const { editorRef: buyEditorRef, areaRef: buyAreaRef, ready: buyReady } = useReteAppEditor(buyCanvasRef);
-    const { editorRef: sellEditorRef, areaRef: sellAreaRef, ready: sellReady } = useReteAppEditor(sellCanvasRef);
-    const [expanded, setExpanded] = useState(null); // 'buy' | 'sell' | null
+    const { editorRef, areaRef, ready } = useReteAppEditor(canvasRef);
     const [showCodePreview, setShowCodePreview] = useState(false);
     const [generatedCode, setGeneratedCode] = useState('');
 
@@ -44,22 +41,7 @@ const LogicEditorPage = ({ selectedLogicId, onBack, onSave, defaultNewLogicName 
         document.documentElement.setAttribute('data-theme', next);
     }, []);
 
-    // BuyGraph 확장/축소 시 Rete 영역 갱신(컨테이너 크기 변화 반영)
-    useEffect(() => {
-        try {
-            if (expanded === 'buy') {
-                const a = buyAreaRef.current;
-                if (a && a.area && typeof a.area.update === 'function') a.area.update();
-            } else if (expanded === 'sell') {
-                const a = sellAreaRef.current;
-                if (a && a.area && typeof a.area.update === 'function') a.area.update();
-            } else {
-                const ba = buyAreaRef.current; const sa = sellAreaRef.current;
-                if (ba && ba.area && typeof ba.area.update === 'function') ba.area.update();
-                if (sa && sa.area && typeof sa.area.update === 'function') sa.area.update();
-            }
-        } catch {}
-    }, [expanded, buyAreaRef, sellAreaRef]);
+
 
     const toggleTheme = useCallback(() => {
         setTheme((t) => {
@@ -93,36 +75,27 @@ const LogicEditorPage = ({ selectedLogicId, onBack, onSave, defaultNewLogicName 
     // 2) 에디터가 준비된 이후 그래프를 로드
     useEffect(() => {
         if (!logic || !selectedLogicId) return;
-        if (!buyReady && !sellReady) return; // 둘 중 하나라도 준비되면 해당 것만 로드
+        if (!ready) return;
 
         const data = logic.data || {};
-        const buyGraph = data.buyGraph || data.buy || data.graphBuy;
-        const sellGraph = data.sellGraph || data.sell || data.graphSell;
+        const graph = data.graph || data.buyGraph || data.buy || data.graphBuy;
 
-        const buyEditor = buyEditorRef.current;
-        const buyArea = buyAreaRef.current;
-        const sellEditor = sellEditorRef.current;
-        const sellArea = sellAreaRef.current;
+        const editor = editorRef.current;
+        const area = areaRef.current;
 
         (async () => {
             try {
-                if (buyReady && buyEditor && buyArea && buyGraph) {
-                    await importGraph(buyEditor, buyArea, buyGraph);
-                    if (typeof buyEditor.reteUiEnhance === 'function') {
-                        try { buyEditor.reteUiEnhance() } catch {}
-                    }
-                }
-                if (sellReady && sellEditor && sellArea && sellGraph) {
-                    await importGraph(sellEditor, sellArea, sellGraph);
-                    if (typeof sellEditor.reteUiEnhance === 'function') {
-                        try { sellEditor.reteUiEnhance() } catch {}
+                if (ready && editor && area && graph) {
+                    await importGraph(editor, area, graph);
+                    if (typeof editor.reteUiEnhance === 'function') {
+                        try { editor.reteUiEnhance() } catch {}
                     }
                 }
             } catch (e) {
                 console.warn('그래프 로드 중 오류:', e);
             }
         })();
-    }, [logic, selectedLogicId, buyReady, sellReady, buyEditorRef, buyAreaRef, sellEditorRef, sellAreaRef]);
+    }, [logic, selectedLogicId, ready, editorRef, areaRef]);
 
         // 노드 드래그 시작 핸들러
         const onDragStart = useCallback((e, kind) => {
@@ -147,7 +120,7 @@ const LogicEditorPage = ({ selectedLogicId, onBack, onSave, defaultNewLogicName 
             return found || null;
         };
 
-        const handleDropOn = useCallback(async (e, which) => {
+        const handleDropOn = useCallback(async (e) => {
             e.preventDefault();
             const kind = extractKind(e.dataTransfer);
             if (!kind) return;
@@ -157,36 +130,26 @@ const LogicEditorPage = ({ selectedLogicId, onBack, onSave, defaultNewLogicName 
             ];
             if (!allowed.includes(kind)) { console.warn('드롭된 kind 무시:', kind); return; }
 
-            const editorRef = which === 'buy' ? buyEditorRef : sellEditorRef;
-            const areaRef = which === 'buy' ? buyAreaRef : sellAreaRef;
-            const containerRef = which === 'buy' ? buyCanvasRef : sellCanvasRef;
-
             const editor = editorRef.current;
             const area = areaRef.current;
-            const container = containerRef.current;
+            const container = canvasRef.current;
 
             if (!editor || !area || !container) return;
 
             const { x, y } = clientToWorld(area, container, e.clientX, e.clientY, e);
             const node = createNodeByKind(kind);
-            // 추가 Buy/Sell 단일 개수 제한 보강 (importGraph 외 실시간)
-            if (node.kind === 'buy' && editor.getNodes().some(n => n.kind === 'buy')) { toast.warning('[드롭 차단] Buy 노드는 1개만 허용'); return; }
-            if (node.kind === 'sell' && editor.getNodes().some(n => n.kind === 'sell')) { toast.warning('[드롭 차단] Sell 노드는 1개만 허용'); return; }
             await editor.addNode(node);
             await area.nodeViews.get(node.id)?.translate(x, y);
-        }, [buyEditorRef, sellEditorRef, buyAreaRef, sellAreaRef]);
+        }, [editorRef, areaRef]);
 
     const handleSave = async () => {
         try {
-            const buyEditor = buyEditorRef.current;
-            const buyArea = buyAreaRef.current;
-            const sellEditor = sellEditorRef.current;
-            const sellArea = sellAreaRef.current;
+            const editor = editorRef.current;
+            const area = areaRef.current;
 
-            const buyGraph = buyEditor && buyArea ? exportGraph(buyEditor, buyArea) : undefined;
-            const sellGraph = sellEditor && sellArea ? exportGraph(sellEditor, sellArea) : undefined;
+            const graph = editor && area ? exportGraph(editor, area) : undefined;
 
-            const updatedLogicData = { buyGraph, sellGraph };
+            const updatedLogicData = { graph };
 
             const payload = {
                 id: selectedLogicId || `logic-${Date.now()}`,
@@ -207,41 +170,24 @@ const LogicEditorPage = ({ selectedLogicId, onBack, onSave, defaultNewLogicName 
 
     // Python 코드 생성 및 미리보기
     const handleGenerateCode = useCallback(() => {
-        const buyEditor = buyEditorRef.current;
-        const buyArea = buyAreaRef.current;
-        const sellEditor = sellEditorRef.current;
-        const sellArea = sellAreaRef.current;
+        const editor = editorRef.current;
+        const area = areaRef.current;
 
-        const buyGraph = buyEditor && buyArea ? exportGraph(buyEditor, buyArea) : { nodes: [], connections: [] };
-        const sellGraph = sellEditor && sellArea ? exportGraph(sellEditor, sellArea) : { nodes: [], connections: [] };
+        const graph = editor && area ? exportGraph(editor, area) : { nodes: [], connections: [] };
 
-        // Buy와 Sell 그래프 합치기
-        const combinedGraph = {
-            nodes: [...buyGraph.nodes, ...sellGraph.nodes],
-            connections: [...buyGraph.connections, ...sellGraph.connections]
-        };
-
-        const code = generatePythonCode(combinedGraph);
+        const code = generatePythonCode(graph);
         setGeneratedCode(code);
         setShowCodePreview(true);
-    }, [buyEditorRef, buyAreaRef, sellEditorRef, sellAreaRef]);
+    }, [editorRef, areaRef]);
 
     // Jupyter Notebook 다운로드
     const handleExportJupyter = useCallback(() => {
-        const buyEditor = buyEditorRef.current;
-        const buyArea = buyAreaRef.current;
-        const sellEditor = sellEditorRef.current;
-        const sellArea = sellAreaRef.current;
+        const editor = editorRef.current;
+        const area = areaRef.current;
 
-        const buyGraph = buyEditor && buyArea ? exportGraph(buyEditor, buyArea) : { nodes: [], connections: [] };
-        const sellGraph = sellEditor && sellArea ? exportGraph(sellEditor, sellArea) : { nodes: [], connections: [] };
+        const graph = editor && area ? exportGraph(editor, area) : { nodes: [], connections: [] };
 
-        const combinedGraph = {
-            nodes: [...buyGraph.nodes, ...sellGraph.nodes],
-            connections: [...buyGraph.connections, ...sellGraph.connections]
-        };
-
-        const notebook = generateJupyterNotebook(combinedGraph, logicName || 'ML Pipeline');
+        const notebook = generateJupyterNotebook(graph, logicName || 'ML Pipeline');
         
         const blob = new Blob([notebook], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
@@ -252,24 +198,16 @@ const LogicEditorPage = ({ selectedLogicId, onBack, onSave, defaultNewLogicName 
         URL.revokeObjectURL(url);
 
         toast.success('Jupyter Notebook이 다운로드되었습니다!');
-    }, [buyEditorRef, buyAreaRef, sellEditorRef, sellAreaRef, logicName, toast]);
+    }, [editorRef, areaRef, logicName, toast]);
 
     // Python Script 다운로드
     const handleExportPython = useCallback(() => {
-        const buyEditor = buyEditorRef.current;
-        const buyArea = buyAreaRef.current;
-        const sellEditor = sellEditorRef.current;
-        const sellArea = sellAreaRef.current;
+        const editor = editorRef.current;
+        const area = areaRef.current;
 
-        const buyGraph = buyEditor && buyArea ? exportGraph(buyEditor, buyArea) : { nodes: [], connections: [] };
-        const sellGraph = sellEditor && sellArea ? exportGraph(sellEditor, sellArea) : { nodes: [], connections: [] };
+        const graph = editor && area ? exportGraph(editor, area) : { nodes: [], connections: [] };
 
-        const combinedGraph = {
-            nodes: [...buyGraph.nodes, ...sellGraph.nodes],
-            connections: [...buyGraph.connections, ...sellGraph.connections]
-        };
-
-        const script = generatePythonScript(combinedGraph, logicName || 'ML Pipeline');
+        const script = generatePythonScript(graph, logicName || 'ML Pipeline');
         
         const blob = new Blob([script], { type: 'text/x-python' });
         const url = URL.createObjectURL(blob);
@@ -280,16 +218,15 @@ const LogicEditorPage = ({ selectedLogicId, onBack, onSave, defaultNewLogicName 
         URL.revokeObjectURL(url);
 
         toast.success('Python 스크립트가 다운로드되었습니다!');
-    }, [buyEditorRef, buyAreaRef, sellEditorRef, sellAreaRef, logicName, toast]);
+    }, [editorRef, areaRef, logicName, toast]);
 
     // Gemini에서 생성된 파이프라인을 캔버스에 추가
     const handlePipelineGenerated = useCallback(async (pipeline) => {
         try {
-            // Buy 캔버스에 파이프라인 추가 (ML 노드는 어느 캔버스든 상관없음)
-            const buyEditor = buyEditorRef.current;
-            const buyArea = buyAreaRef.current;
+            const editor = editorRef.current;
+            const area = areaRef.current;
             
-            if (!buyEditor || !buyArea) {
+            if (!editor || !area) {
                 toast.error('에디터가 준비되지 않았습니다.');
                 return;
             }
@@ -317,10 +254,10 @@ const LogicEditorPage = ({ selectedLogicId, onBack, onSave, defaultNewLogicName 
                 }
 
                 // 노드를 에디터에 추가
-                await buyEditor.addNode(node);
+                await editor.addNode(node);
                 
                 // 위치 설정
-                await buyArea.translate(node.id, nodeData.position);
+                await area.translate(node.id, nodeData.position);
                 
                 // 매핑 저장
                 nodeMap.set(nodeData.id, node);
@@ -334,7 +271,7 @@ const LogicEditorPage = ({ selectedLogicId, onBack, onSave, defaultNewLogicName 
             
             // 기존 연결 확인 함수
             const connectionExists = (srcId, srcOut, tgtId, tgtIn) => {
-                const existingConns = buyEditor.getConnections();
+                const existingConns = editor.getConnections();
                 return existingConns.some(conn => 
                     conn.source === srcId && 
                     conn.sourceOutput === srcOut && 
@@ -378,7 +315,7 @@ const LogicEditorPage = ({ selectedLogicId, onBack, onSave, defaultNewLogicName 
                     }
                     
                     try {
-                        await buyEditor.addConnection({
+                        await editor.addConnection({
                             source: sourceNode.id,
                             sourceOutput: outputKey,
                             target: targetNode.id,
@@ -412,7 +349,7 @@ const LogicEditorPage = ({ selectedLogicId, onBack, onSave, defaultNewLogicName 
                         }
                         
                         try {
-                            await buyEditor.addConnection({
+                            await editor.addConnection({
                                 source: src.id,
                                 sourceOutput: srcOut,
                                 target: dst.id,
@@ -427,17 +364,17 @@ const LogicEditorPage = ({ selectedLogicId, onBack, onSave, defaultNewLogicName 
             }
 
             // 화면 업데이트
-            await buyArea.area.update();
+            await area.area.update();
             
             toast.success(`${pipeline.nodes.length}개의 노드가 추가되었습니다!`);
         } catch (error) {
             console.error('파이프라인 적용 오류:', error);
             toast.error('파이프라인을 캔버스에 적용하는 중 오류가 발생했습니다.');
         }
-    }, [buyEditorRef, buyAreaRef, toast]);
+    }, [editorRef, areaRef, toast]);
 
   return (
-    <div className="w-full max-w-[1900px] h-[100vh] p-4 sm:p-6 lg:p-8 rounded-3xl shadow-2xl flex flex-col bg-neutral-950 text-gray-200 border border-neutral-800/70">
+    <div className="w-full max-w-[1900px] p-4 sm:p-6 lg:p-8 rounded-3xl shadow-2xl flex flex-col bg-neutral-950 text-gray-200 border border-neutral-800/70">
         {/* 상단 헤더: 로직 이름 수정 및 거래소/종목 선택 + 저장/뒤로가기 버튼 */}
     <div className="flex items-center justify-between pb-4 border-b border-neutral-800">
             <input 
@@ -494,9 +431,9 @@ const LogicEditorPage = ({ selectedLogicId, onBack, onSave, defaultNewLogicName 
         </div>
 
         {/* 메인 컨텐츠: 왼쪽 노드 목록 + 중앙 캔버스 2영역 + 오른쪽 정보 패널 */}
-        <div className="flex flex-grow mt-4 gap-6">
+        <div className="flex mt-4 gap-6 pb-8">
             {/* 1. RETE 노드 (왼쪽 사이드바) */}
-            <div className="w-1/5 p-4 bg-neutral-900/60 rounded-2xl border border-neutral-800/70 flex flex-col text-center gap-7 overflow-y-auto">
+            <div className="w-1/5 p-4 bg-neutral-900/60 rounded-2xl border border-neutral-800/70 flex flex-col text-center gap-7 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 200px)' }}>
                 {[
                     { 
                         title: '📊 Data Source', 
@@ -559,57 +496,22 @@ const LogicEditorPage = ({ selectedLogicId, onBack, onSave, defaultNewLogicName 
             </div>
 
             {/* 2. 노드 설정 공간 (중앙 캔버스) */}
-                     <div className="w-5/6 rounded-2xl border border-neutral-800/70 flex flex-col bg-neutral-900/40">
-                        {/* 상단 영역 (Rete.js 캔버스) */}
-                        <div
-                            ref={buyCanvasRef}
-                            onDragOver={(e) => e.preventDefault()}
-                            onDrop={(e) => handleDropOn(e, 'buy')}
-                            className={[
-                                expanded === 'sell' ? 'flex-none h-0 pointer-events-none opacity-0' : (expanded === 'buy' ? 'flex-none' : 'flex-1'),
-                                'relative overflow-hidden',
-                                expanded === 'buy' || expanded === 'sell' ? '' : 'border-b border-neutral-800',
-                                'bg-[radial-gradient(ellipse_at_top,_rgba(255,255,255,0.03),_transparent_60%)]'
-                            ].join(' ')}
-                            style={expanded === 'buy' ? { height: 'calc(100% - 0px)' } : undefined}
-                            title="여기로 드래그하여 노드를 추가"
-                        >
-                            <button
-                                type="button"
-                                onClick={() => setExpanded(prev => prev === 'buy' ? null : 'buy')}
-                                className="absolute left-2 top-2 z-10 text-xs font-semibold text-gray-300 bg-neutral-800/70 border border-neutral-700 px-2 py-1 rounded shadow-sm select-none hover:bg-neutral-700"
-                                title={expanded === 'buy' ? '축소하기' : '확장하기'}
-                            >
-                                BuyGraph
-                            </button>
-                        </div>
-
-                        {/* 하단 영역 (Rete.js 캔버스) */}
-                        <div
-                            ref={sellCanvasRef}
-                            onDragOver={(e) => e.preventDefault()}
-                            onDrop={(e) => handleDropOn(e, 'sell')}
-                            className={[
-                                expanded === 'buy' ? 'flex-none h-0 pointer-events-none opacity-0' : (expanded === 'sell' ? 'flex-none' : 'flex-1'),
-                                'relative overflow-hidden',
-                                'bg-[radial-gradient(ellipse_at_bottom,_rgba(255,255,255,0.03),_transparent_60%)]'
-                            ].join(' ')}
-                            style={expanded === 'sell' ? { height: 'calc(100% - 0px)' } : undefined}
-                            title="여기로 드래그하여 노드를 추가"
-                        >
-                            <button
-                                type="button"
-                                onClick={() => setExpanded(prev => prev === 'sell' ? null : 'sell')}
-                                className="absolute left-2 top-2 z-10 text-xs font-semibold text-gray-300 bg-neutral-800/70 border border-neutral-700 px-2 py-1 rounded shadow-sm select-none hover:bg-neutral-700"
-                                title={expanded === 'sell' ? '축소하기' : '확장하기'}
-                            >
-                                SellGraph
-                            </button>
-                        </div>
+            <div className="w-3/5 rounded-2xl border border-neutral-800/70 bg-neutral-900/40" style={{ height: 'calc(100vh - 200px)' }}>
+                <div
+                    ref={canvasRef}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => handleDropOn(e)}
+                    className="w-full h-full relative overflow-hidden bg-[radial-gradient(ellipse_at_center,_rgba(255,255,255,0.03),_transparent_60%)]"
+                    title="여기로 드래그하여 노드를 추가"
+                >
+                    <div className="absolute left-2 top-2 z-10 text-xs font-semibold text-gray-300 bg-neutral-800/70 border border-neutral-700 px-2 py-1 rounded shadow-sm select-none">
+                        ML Pipeline Canvas
                     </div>
+                </div>
+            </div>
 
             {/* 3. 정보 및 실행 패널 (오른쪽 사이드바) */}
-            <div className="w-1/5 flex flex-col gap-4">
+            <div className="w-1/5 flex flex-col gap-4" style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
                 {/* Gemini AI Python 코드 생성기 */}
                 <GeminiPipelineGenerator />
                 

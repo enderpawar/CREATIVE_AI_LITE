@@ -16,6 +16,7 @@ const GeminiPipelineGenerator = () => {
     const [hasApiKey, setHasApiKey] = useState(false);
     const [prompt, setPrompt] = useState('');
     const [generatedCode, setGeneratedCode] = useState('');
+    const [nodeGuide, setNodeGuide] = useState([]);
     const [isGenerating, setIsGenerating] = useState(false);
     const [showApiKeyInput, setShowApiKeyInput] = useState(false);
 
@@ -62,10 +63,12 @@ const GeminiPipelineGenerator = () => {
 
         setIsGenerating(true);
         setGeneratedCode('');
+        setNodeGuide([]);
         
         try {
-            const code = await generatePythonCode(prompt);
-            setGeneratedCode(code);
+            const result = await generatePythonCode(prompt);
+            setGeneratedCode(result.code);
+            setNodeGuide(result.nodeGuide || []);
             toast.success('코드가 생성되었습니다!');
         } catch (error) {
             console.error('코드 생성 오류:', error);
@@ -314,6 +317,298 @@ const GeminiPipelineGenerator = () => {
                     >
                         {isGenerating ? '🔄 생성 중...' : '✨ AI로 코드 생성하기'}
                     </button>
+
+                    {/* 노드 배치 가이드 */}
+                    {nodeGuide.length > 0 && (
+                        <div style={{
+                            backgroundColor: 'var(--bg-primary)',
+                            borderRadius: '6px',
+                            marginBottom: '15px',
+                            border: '1px solid var(--border-color)',
+                            maxHeight: '500px',
+                            overflow: 'hidden',
+                            display: 'flex',
+                            flexDirection: 'column'
+                        }}>
+                            <div style={{
+                                padding: '15px 15px 12px 15px',
+                                borderBottom: '1px solid var(--border-color)',
+                                position: 'sticky',
+                                top: 0,
+                                backgroundColor: 'var(--bg-primary)',
+                                zIndex: 1
+                            }}>
+                                <h4 style={{
+                                    margin: 0,
+                                    fontSize: '15px',
+                                    fontWeight: '600',
+                                    color: 'var(--text-primary)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px'
+                                }}>
+                                    <span>📋</span>
+                                    <span>노드 배치 가이드</span>
+                                    <span style={{
+                                        fontSize: '11px',
+                                        color: 'var(--text-secondary)',
+                                        fontWeight: 'normal',
+                                        marginLeft: 'auto'
+                                    }}>
+                                        ({nodeGuide.length}단계)
+                                    </span>
+                                </h4>
+                            </div>
+                            <div style={{
+                                padding: '12px 15px 15px 15px',
+                                overflowY: 'auto',
+                                overflowX: 'hidden',
+                                flex: 1
+                            }}>
+                                <div style={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '12px'
+                                }}>
+                                {nodeGuide.map((guide, idx) => (
+                                    <div
+                                        key={idx}
+                                        style={{
+                                            padding: '12px',
+                                            backgroundColor: 'var(--bg-secondary)',
+                                            borderRadius: '6px',
+                                            borderLeft: '3px solid #3b82f6'
+                                        }}
+                                    >
+                                        <div style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '8px',
+                                            marginBottom: '6px'
+                                        }}>
+                                            <span style={{
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                width: '24px',
+                                                height: '24px',
+                                                borderRadius: '50%',
+                                                backgroundColor: '#3b82f6',
+                                                color: 'white',
+                                                fontSize: '12px',
+                                                fontWeight: 'bold'
+                                            }}>
+                                                {guide.step}
+                                            </span>
+                                            <span style={{
+                                                fontSize: '14px',
+                                                fontWeight: '600',
+                                                color: 'var(--text-primary)'
+                                            }}>
+                                                {guide.nodeName}
+                                            </span>
+                                            <span style={{
+                                                fontSize: '11px',
+                                                padding: '2px 8px',
+                                                backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                                                color: '#3b82f6',
+                                                borderRadius: '4px',
+                                                fontFamily: 'monospace'
+                                            }}>
+                                                {guide.nodeType}
+                                            </span>
+                                        </div>
+                                        <p style={{
+                                            margin: '6px 0 0 32px',
+                                            fontSize: '13px',
+                                            color: 'var(--text-secondary)',
+                                            lineHeight: '1.5'
+                                        }}>
+                                            {guide.description}
+                                        </p>
+                                        {guide.settings && Object.keys(guide.settings).length > 0 && (
+                                            <div style={{
+                                                marginTop: '8px',
+                                                marginLeft: '32px',
+                                                fontSize: '12px',
+                                                fontFamily: 'monospace',
+                                                color: 'var(--text-secondary)',
+                                                backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                                                padding: '6px 10px',
+                                                borderRadius: '4px'
+                                            }}>
+                                                <div style={{ 
+                                                    fontSize: '10px', 
+                                                    color: 'var(--text-secondary)', 
+                                                    marginBottom: '4px',
+                                                    fontWeight: '600'
+                                                }}>
+                                                    ⚙️ 설정 값:
+                                                </div>
+                                                {Object.entries(guide.settings).map(([key, value]) => (
+                                                    <div key={key} style={{ marginBottom: '2px' }}>
+                                                        <span style={{ color: '#f59e0b' }}>{key}</span>
+                                                        <span style={{ color: 'var(--text-secondary)' }}>: </span>
+                                                        <span style={{ color: '#10b981' }}>
+                                                            {typeof value === 'string' ? `"${value}"` : value}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                        
+                                        {/* 연결 정보 - 간단하고 명확하게 */}
+                                        {guide.connections && (guide.connections.from?.length > 0 || guide.connections.to?.length > 0) && (
+                                            <div style={{
+                                                marginTop: '10px',
+                                                marginLeft: '32px'
+                                            }}>
+                                                {/* 이 노드로 들어오는 연결 */}
+                                                {guide.connections.from && guide.connections.from.length > 0 && (
+                                                    <div style={{
+                                                        marginBottom: '8px',
+                                                        padding: '8px 10px',
+                                                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                                                        borderLeft: '3px solid #10b981',
+                                                        borderRadius: '4px'
+                                                    }}>
+                                                        <div style={{
+                                                            fontSize: '11px',
+                                                            fontWeight: '600',
+                                                            color: '#10b981',
+                                                            marginBottom: '6px'
+                                                        }}>
+                                                            📥 입력 소켓에 연결하기:
+                                                        </div>
+                                                        {guide.connections.from.map((conn, connIdx) => {
+                                                            const sourceNode = nodeGuide.find(n => n.step === conn.step);
+                                                            // 현재 노드의 입력 소켓 이름 찾기
+                                                            const inputSocket = conn.input || 'data'; // 기본값
+                                                            
+                                                            return (
+                                                                <div key={connIdx} style={{
+                                                                    fontSize: '12px',
+                                                                    color: 'var(--text-primary)',
+                                                                    marginBottom: '6px',
+                                                                    lineHeight: '1.6',
+                                                                    padding: '6px',
+                                                                    backgroundColor: 'rgba(16, 185, 129, 0.05)',
+                                                                    borderRadius: '4px'
+                                                                }}>
+                                                                    <div style={{ marginBottom: '3px' }}>
+                                                                        <code style={{ 
+                                                                            fontFamily: 'monospace',
+                                                                            fontSize: '11px',
+                                                                            color: '#10b981',
+                                                                            backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                                                                            padding: '2px 6px',
+                                                                            borderRadius: '3px',
+                                                                            fontWeight: '600'
+                                                                        }}>
+                                                                            {inputSocket}
+                                                                        </code>
+                                                                        <span style={{ color: 'var(--text-secondary)', fontSize: '11px' }}> 입력 소켓에</span>
+                                                                    </div>
+                                                                    <div style={{ paddingLeft: '8px', borderLeft: '2px solid rgba(16, 185, 129, 0.3)' }}>
+                                                                        <span style={{ color: '#10b981', fontWeight: '600' }}>
+                                                                            {conn.step}단계
+                                                                        </span>
+                                                                        <span style={{ color: 'var(--text-secondary)' }}> ({sourceNode?.nodeName})의 </span>
+                                                                        <code style={{ 
+                                                                            fontFamily: 'monospace',
+                                                                            fontSize: '11px',
+                                                                            color: '#f59e0b',
+                                                                            backgroundColor: 'rgba(245, 158, 11, 0.15)',
+                                                                            padding: '2px 6px',
+                                                                            borderRadius: '3px',
+                                                                            fontWeight: '600'
+                                                                        }}>
+                                                                            {conn.output}
+                                                                        </code>
+                                                                        <span style={{ color: 'var(--text-secondary)' }}> 출력 연결</span>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
+                                                
+                                                {/* 이 노드에서 나가는 연결 */}
+                                                {guide.connections.to && guide.connections.to.length > 0 && (
+                                                    <div style={{
+                                                        padding: '8px 10px',
+                                                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                                        borderLeft: '3px solid #3b82f6',
+                                                        borderRadius: '4px'
+                                                    }}>
+                                                        <div style={{
+                                                            fontSize: '11px',
+                                                            fontWeight: '600',
+                                                            color: '#3b82f6',
+                                                            marginBottom: '6px'
+                                                        }}>
+                                                            📤 출력 소켓에서 내보내기:
+                                                        </div>
+                                                        {guide.connections.to.map((conn, connIdx) => {
+                                                            const targetNode = nodeGuide.find(n => n.step === conn.step);
+                                                            // 현재 노드의 출력 소켓 이름 찾기
+                                                            const outputSocket = conn.output || 'scaled'; // Gemini가 제공한 정보 활용
+                                                            
+                                                            return (
+                                                                <div key={connIdx} style={{
+                                                                    fontSize: '12px',
+                                                                    color: 'var(--text-primary)',
+                                                                    marginBottom: '6px',
+                                                                    lineHeight: '1.6',
+                                                                    padding: '6px',
+                                                                    backgroundColor: 'rgba(59, 130, 246, 0.05)',
+                                                                    borderRadius: '4px'
+                                                                }}>
+                                                                    <div style={{ marginBottom: '3px' }}>
+                                                                        <code style={{ 
+                                                                            fontFamily: 'monospace',
+                                                                            fontSize: '11px',
+                                                                            color: '#3b82f6',
+                                                                            backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                                                                            padding: '2px 6px',
+                                                                            borderRadius: '3px',
+                                                                            fontWeight: '600'
+                                                                        }}>
+                                                                            {outputSocket}
+                                                                        </code>
+                                                                        <span style={{ color: 'var(--text-secondary)', fontSize: '11px' }}> 출력 소켓을</span>
+                                                                    </div>
+                                                                    <div style={{ paddingLeft: '8px', borderLeft: '2px solid rgba(59, 130, 246, 0.3)' }}>
+                                                                        <span style={{ color: '#3b82f6', fontWeight: '600' }}>
+                                                                            {conn.step}단계
+                                                                        </span>
+                                                                        <span style={{ color: 'var(--text-secondary)' }}> ({targetNode?.nodeName})의 </span>
+                                                                        <code style={{ 
+                                                                            fontFamily: 'monospace',
+                                                                            fontSize: '11px',
+                                                                            color: '#3b82f6',
+                                                                            backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                                                                            padding: '2px 6px',
+                                                                            borderRadius: '3px',
+                                                                            fontWeight: '600'
+                                                                        }}>
+                                                                            {conn.input}
+                                                                        </code>
+                                                                        <span style={{ color: 'var(--text-secondary)' }}> 입력에 연결</span>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* 생성된 코드 표시 */}
                     {generatedCode && (

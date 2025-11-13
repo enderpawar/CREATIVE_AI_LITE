@@ -109,6 +109,73 @@ export const NodeStyles = styled.div<
   ${(props) => props.styles && props.styles(props)}
 `;
 
+// 커스텀 Input 컴포넌트 (Rete InputControl과 연동)
+function CustomInput(props: {
+  control: any;
+  type?: string;
+  step?: string;
+  min?: string;
+  max?: string;
+}) {
+  const { control, type = 'text', step, min, max } = props;
+  const [value, setValue] = useState(() => {
+    return typeof control.getValue === 'function' ? control.getValue() : control.value;
+  });
+
+  useEffect(() => {
+    const update = () => {
+      const newValue = typeof control.getValue === 'function' ? control.getValue() : control.value;
+      setValue(newValue);
+    };
+    
+    // Listen for control changes
+    if (control.change) {
+      control.change.subscribe(update);
+      return () => control.change.unsubscribe(update);
+    }
+  }, [control]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = type === 'number' ? parseFloat(e.target.value) : e.target.value;
+    setValue(newValue);
+    
+    try {
+      if (typeof control.setValue === 'function') {
+        control.setValue(newValue);
+      } else {
+        control.value = newValue;
+      }
+      // Trigger change event if it exists
+      if (control.change?.emit) {
+        control.change.emit();
+      }
+    } catch (err) {
+      console.error('Failed to set control value:', err);
+    }
+  };
+
+  return (
+    <input
+      type={type}
+      value={value ?? ''}
+      onChange={handleChange}
+      step={step}
+      min={min}
+      max={max}
+      style={{
+        width: '100%',
+        boxSizing: 'border-box',
+        background: 'var(--control-bg)',
+        color: 'var(--control-fg)',
+        border: '1px solid var(--control-border)',
+        outline: 'none',
+        borderRadius: '10px',
+        padding: '6px 8px',
+      }}
+    />
+  );
+}
+
 // 간단한 React 기반 커스텀 드롭다운(기존 enhancer의 스타일을 최대한 유지)
 function Dropdown(props: {
   options: string[];
@@ -322,9 +389,12 @@ export function CustomNode<Scheme extends ClassicScheme>(props: Props<Scheme>) {
         if (!control) return null;
         const lbl = resolveLabel(key);
         
-        // Debug logging for Data Split
-        if (label === 'Data Split') {
-          console.log(`Control ${key}:`, control);
+        // Debug logging for Data Split and Classifier
+        if (label === 'Data Split' || label === 'Classifier') {
+          console.log(`${label} - Control ${key}:`, control);
+          const ctrl: any = control;
+          console.log(`  - Type: ${ctrl.type || 'unknown'}`);
+          console.log(`  - Value: ${typeof ctrl.getValue === 'function' ? ctrl.getValue() : ctrl.value}`);
         }
 
         // 직접 렌더 select: 특정 노드/키 조합에 대해 드롭다운 렌더링
@@ -377,57 +447,20 @@ export function CustomNode<Scheme extends ClassicScheme>(props: Props<Scheme>) {
         }
 
         // 기본 컨트롤은 기존처럼 RefControl 렌더
-        // Data Split 노드의 경우 직접 input 렌더링
-        if (label === 'Data Split') {
-          const ctrl: any = control as any;
-          const value = typeof ctrl.getValue === 'function' ? ctrl.getValue() : ctrl.value;
-          const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-            const newValue = key === 'ratio' ? parseFloat(e.target.value) : e.target.value;
-            try {
-              if (typeof ctrl.setValue === 'function') ctrl.setValue(newValue);
-              else ctrl.value = newValue;
-            } catch {}
-          };
-          
-          return (
-            <div key={key} className="control-row">
-              {lbl && <div className="control-label">{lbl}</div>}
-              <div className="control">
-                <input
-                  type={key === 'ratio' ? 'number' : 'text'}
-                  value={value ?? ''}
-                  onChange={onChange}
-                  step={key === 'ratio' ? '0.1' : undefined}
-                  min={key === 'ratio' ? '0' : undefined}
-                  max={key === 'ratio' ? '1' : undefined}
-                />
-              </div>
-            </div>
-          );
-        }
+        // InputControl인 경우 CustomInput 사용
+        const ctrl: any = control as any;
+        const isInputControl = ctrl.type === 'text' || ctrl.type === 'number';
         
-        // Classifier 노드의 경우 직접 input 렌더링
-        if (label === 'Classifier' && key === 'n_estimators') {
-          const ctrl: any = control as any;
-          const value = typeof ctrl.getValue === 'function' ? ctrl.getValue() : ctrl.value;
-          const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-            const newValue = parseInt(e.target.value);
-            try {
-              if (typeof ctrl.setValue === 'function') ctrl.setValue(newValue);
-              else ctrl.value = newValue;
-            } catch {}
-          };
-          
+        if (isInputControl) {
           return (
             <div key={key} className="control-row">
               {lbl && <div className="control-label">{lbl}</div>}
               <div className="control">
-                <input
-                  type="number"
-                  value={value ?? 100}
-                  onChange={onChange}
-                  min="1"
-                  step="1"
+                <CustomInput 
+                  control={control}
+                  type={ctrl.type}
+                  step={ctrl.type === 'number' ? '0.1' : undefined}
+                  min={ctrl.type === 'number' ? '0' : undefined}
                 />
               </div>
             </div>
@@ -437,14 +470,12 @@ export function CustomNode<Scheme extends ClassicScheme>(props: Props<Scheme>) {
         return (
           <div key={key} className="control-row">
             {lbl && <div className="control-label">{lbl}</div>}
-            <div className="control">
-              <RefControl
-                name="control"
-                emit={props.emit}
-                payload={control}
-                data-testid={`control-${key}`}
-              />
-            </div>
+            <RefControl
+              name="control"
+              emit={props.emit}
+              payload={control}
+              data-testid={`control-${key}`}
+            />
           </div>
         );
       })}

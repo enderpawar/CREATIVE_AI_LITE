@@ -4,6 +4,7 @@ import { useReteAppEditor } from '../hooks/useReteAppEditor';
 import { createNodeByKind, clientToWorld, exportGraph, importGraph } from '../rete/app-editor';
 import { loadLogic as loadLogicFromStorage, loadTheme, saveTheme } from '../utils/logicStorage';
 import { generatePythonCode, generateJupyterNotebook, generatePythonScript } from '../utils/pipelineToCode';
+import { enhanceCodeWithAI } from '../utils/geminiPipeline';
 import CSVDataManager from './CSVDataManager.jsx';
 import GeminiPipelineGenerator from './GeminiPipelineGenerator.jsx';
 import QuickStartTemplates from './QuickStartTemplates.jsx';
@@ -21,6 +22,42 @@ const LogicEditorPage = ({ selectedLogicId, onBack, onSave, defaultNewLogicName 
     const { editorRef, areaRef, ready } = useReteAppEditor(canvasRef);
     const [showCodePreview, setShowCodePreview] = useState(false);
     const [generatedCode, setGeneratedCode] = useState('');
+    const [enhancedCode, setEnhancedCode] = useState('');
+    const [userIntent, setUserIntent] = useState('');
+    const [isEnhancing, setIsEnhancing] = useState(false);
+    const [showIntentInput, setShowIntentInput] = useState(false);
+    const [showEnhancedCode, setShowEnhancedCode] = useState(false); // AI 개선 코드 표시 여부
+
+    // localStorage에서 AI 개선 코드 불러오기
+    useEffect(() => {
+        if (selectedLogicId) {
+            const savedEnhanced = localStorage.getItem(`enhanced_code_${selectedLogicId}`);
+            const savedIntent = localStorage.getItem(`user_intent_${selectedLogicId}`);
+            if (savedEnhanced) {
+                setEnhancedCode(savedEnhanced);
+                setShowEnhancedCode(true); // 저장된 AI 코드가 있으면 표시
+            }
+            if (savedIntent) setUserIntent(savedIntent);
+        } else {
+            // 새 로직일 때는 초기화
+            setEnhancedCode('');
+            setUserIntent('');
+            setShowEnhancedCode(false);
+        }
+    }, [selectedLogicId]);
+
+    // AI 개선 코드와 의도를 localStorage에 저장 (디바운싱)
+    useEffect(() => {
+        if (selectedLogicId && enhancedCode) {
+            localStorage.setItem(`enhanced_code_${selectedLogicId}`, enhancedCode);
+        }
+    }, [enhancedCode, selectedLogicId]);
+
+    useEffect(() => {
+        if (selectedLogicId && userIntent) {
+            localStorage.setItem(`user_intent_${selectedLogicId}`, userIntent);
+        }
+    }, [userIntent, selectedLogicId]);
 
     // 초기 테마 동기화 (localStorage > document > 시스템 선호)
     useEffect(() => {
@@ -253,6 +290,15 @@ const LogicEditorPage = ({ selectedLogicId, onBack, onSave, defaultNewLogicName 
 
             const code = generatePythonCode(graph);
             setGeneratedCode(code);
+            
+            // 모달 열 때 저장된 개선 코드가 있으면 AI 코드 보기, 없으면 노드 기반 코드 보기
+            if (selectedLogicId) {
+                const savedEnhanced = localStorage.getItem(`enhanced_code_${selectedLogicId}`);
+                setShowEnhancedCode(!!savedEnhanced);
+            } else {
+                setShowEnhancedCode(false);
+            }
+            
             setShowCodePreview(true);
         } catch (error) {
             if (error.name === 'PipelineValidationError') {
@@ -261,6 +307,80 @@ const LogicEditorPage = ({ selectedLogicId, onBack, onSave, defaultNewLogicName 
                 toast.error('코드 생성 중 오류가 발생했습니다.');
                 console.error('Code generation error:', error);
             }
+        }
+    }, [editorRef, areaRef, selectedLogicId, toast]);
+
+    // AI로 코드 개선하기
+    const handleEnhanceCode = useCallback(async () => {
+        if (!generatedCode) {
+            toast.error('먼저 코드를 생성해주세요.');
+            return;
+        }
+
+        if (!userIntent.trim()) {
+            setShowIntentInput(true);
+            toast.error('코드의 목적을 입력해주세요.');
+            return;
+        }
+
+        setIsEnhancing(true);
+        try {
+            const enhanced = await enhanceCodeWithAI(generatedCode, userIntent);
+            setEnhancedCode(enhanced);
+            setShowEnhancedCode(true); // AI 개선 코드 표시
+            // localStorage에 즉시 저장
+            if (selectedLogicId) {
+                localStorage.setItem(`enhanced_code_${selectedLogicId}`, enhanced);
+            }
+            toast.success('AI가 코드를 개선했습니다! ✨');
+        } catch (error) {
+            console.error('코드 개선 오류:', error);
+            toast.error(error.message || 'AI 코드 개선에 실패했습니다.');
+        } finally {
+            setIsEnhancing(false);
+        }
+    }, [generatedCode, userIntent, selectedLogicId, toast]);
+
+    // CSV 파일들 다운로드
+    const handleDownloadCSVFiles = useCallback(() => {
+        try {
+            const editor = editorRef.current;
+            if (!editor) return;
+
+            const graph = exportGraph(editor, areaRef.current);
+            const dataLoaders = graph.nodes.filter(n => n.kind === 'dataLoader');
+            
+            if (dataLoaders.length === 0) {
+                toast.error('CSV 파일을 사용하는 노드가 없습니다.');
+                return;
+            }
+
+            let downloadCount = 0;
+            dataLoaders.forEach(node => {
+                const fileName = node.controls?.fileName;
+                if (fileName) {
+                    const csvData = localStorage.getItem(`csv_data_${fileName}`);
+                    if (csvData) {
+                        const blob = new Blob([csvData], { type: 'text/csv' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = fileName;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                        downloadCount++;
+                    }
+                }
+            });
+
+            if (downloadCount > 0) {
+                toast.success(`${downloadCount}개의 CSV 파일이 다운로드되었습니다!`);
+            } else {
+                toast.error('다운로드할 CSV 파일이 없습니다.');
+            }
+        } catch (error) {
+            console.error('CSV 다운로드 오류:', error);
+            toast.error('CSV 파일 다운로드 중 오류가 발생했습니다.');
         }
     }, [editorRef, areaRef, toast]);
 
@@ -272,17 +392,63 @@ const LogicEditorPage = ({ selectedLogicId, onBack, onSave, defaultNewLogicName 
 
             const graph = editor && area ? exportGraph(editor, area) : { nodes: [], connections: [] };
 
-            const notebook = generateJupyterNotebook(graph, logicName || 'ML Pipeline');
+            // AI 개선 코드가 있으면 그것을 사용, 없으면 기본 코드 사용
+            let finalCode;
+            if (enhancedCode) {
+                // AI 개선 코드를 직접 Jupyter 형식으로 변환
+                const sections = enhancedCode.split('\n\n');
+                const cells = [
+                    {
+                        cell_type: 'markdown',
+                        metadata: {},
+                        source: [
+                            `# ${logicName || 'ML Pipeline'}\n`,
+                            '\n',
+                            '✨ **AI가 개선한 코드**: 에러 처리, 로깅, 시각화가 추가되었습니다.\n',
+                            '\n',
+                            `Generated on: ${new Date().toLocaleString('ko-KR')}\n`
+                        ]
+                    },
+                    ...sections.map(section => ({
+                        cell_type: 'code',
+                        execution_count: null,
+                        metadata: {},
+                        outputs: [],
+                        source: section.split('\n').map(line => line + '\n')
+                    }))
+                ];
+                
+                const notebook = {
+                    cells,
+                    metadata: {
+                        kernelspec: {
+                            display_name: 'Python 3',
+                            language: 'python',
+                            name: 'python3'
+                        },
+                        language_info: {
+                            name: 'python',
+                            version: '3.8.0'
+                        }
+                    },
+                    nbformat: 4,
+                    nbformat_minor: 4
+                };
+                
+                finalCode = JSON.stringify(notebook, null, 2);
+            } else {
+                finalCode = generateJupyterNotebook(graph, logicName || 'ML Pipeline');
+            }
             
-            const blob = new Blob([notebook], { type: 'application/json' });
+            const blob = new Blob([finalCode], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `${logicName || 'pipeline'}.ipynb`;
+            a.download = `${logicName || 'pipeline'}${enhancedCode ? '_ai_enhanced' : ''}.ipynb`;
             a.click();
             URL.revokeObjectURL(url);
 
-            toast.success('Jupyter Notebook이 다운로드되었습니다!');
+            toast.success(`Jupyter Notebook${enhancedCode ? ' (AI 개선)' : ''}이 다운로드되었습니다!`);
         } catch (error) {
             if (error.name === 'PipelineValidationError') {
                 toast.error(error.message);
@@ -291,7 +457,7 @@ const LogicEditorPage = ({ selectedLogicId, onBack, onSave, defaultNewLogicName 
                 console.error('Jupyter export error:', error);
             }
         }
-    }, [editorRef, areaRef, logicName, toast]);
+    }, [editorRef, areaRef, logicName, enhancedCode, toast]);
 
     // Python Script 다운로드
     const handleExportPython = useCallback(() => {
@@ -301,17 +467,32 @@ const LogicEditorPage = ({ selectedLogicId, onBack, onSave, defaultNewLogicName 
 
             const graph = editor && area ? exportGraph(editor, area) : { nodes: [], connections: [] };
 
-            const script = generatePythonScript(graph, logicName || 'ML Pipeline');
+            // AI 개선 코드가 있으면 그것을 사용, 없으면 기본 코드 사용
+            let finalCode;
+            if (enhancedCode) {
+                const header = `"""
+${logicName || 'ML Pipeline'}
+
+✨ AI-Enhanced ML Pipeline Script
+- 에러 처리, 로깅, 시각화 포함
+- Generated on: ${new Date().toLocaleString('ko-KR')}
+"""
+
+`;
+                finalCode = header + enhancedCode;
+            } else {
+                finalCode = generatePythonScript(graph, logicName || 'ML Pipeline');
+            }
             
-            const blob = new Blob([script], { type: 'text/x-python' });
+            const blob = new Blob([finalCode], { type: 'text/x-python' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `${logicName || 'pipeline'}.py`;
+            a.download = `${logicName || 'pipeline'}${enhancedCode ? '_ai_enhanced' : ''}.py`;
             a.click();
             URL.revokeObjectURL(url);
 
-            toast.success('Python 스크립트가 다운로드되었습니다!');
+            toast.success(`Python 스크립트${enhancedCode ? ' (AI 개선)' : ''}가 다운로드되었습니다!`);
         } catch (error) {
             if (error.name === 'PipelineValidationError') {
                 toast.error(error.message);
@@ -320,7 +501,7 @@ const LogicEditorPage = ({ selectedLogicId, onBack, onSave, defaultNewLogicName 
                 console.error('Python export error:', error);
             }
         }
-    }, [editorRef, areaRef, logicName, toast]);
+    }, [editorRef, areaRef, logicName, enhancedCode, toast]);
 
     // Gemini에서 생성된 파이프라인을 캔버스에 추가
     const applyPipelineToCanvas = useCallback(async (pipeline) => {
@@ -688,6 +869,44 @@ const LogicEditorPage = ({ selectedLogicId, onBack, onSave, defaultNewLogicName 
 
             {/* 3. 정보 및 실행 패널 (오른쪽 사이드바) */}
             <div className="w-1/5 flex flex-col gap-4" style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
+                {/* 사용자 의도 입력 섹션 */}
+                <div className="p-4 bg-neutral-900/60 rounded-2xl border border-neutral-800/70 flex flex-col">
+                    <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-lg font-semibold text-gray-200">💡 코드 목적 설명</h3>
+                    </div>
+                    <textarea
+                        value={userIntent}
+                        onChange={(e) => setUserIntent(e.target.value)}
+                        placeholder="예: 아이리스 데이터셋으로 꽃 종류를 분류하고, 모델을 저장하고 싶습니다."
+                        rows={4}
+                        className="w-full p-3 bg-neutral-900 rounded border border-neutral-800 text-sm text-gray-300 resize-vertical"
+                        style={{ fontFamily: 'inherit' }}
+                    />
+                    <button
+                        onClick={async () => {
+                            if (!userIntent.trim()) {
+                                toast.error('코드 목적을 먼저 입력해주세요.');
+                                return;
+                            }
+                            // GeminiPipelineGenerator로 스크롤
+                            const geminiSection = document.querySelector('[data-gemini-generator]');
+                            if (geminiSection) {
+                                geminiSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                // 프롬프트 자동 설정
+                                const event = new CustomEvent('setGeminiPrompt', { detail: userIntent });
+                                window.dispatchEvent(event);
+                                toast.success('AI 노드 추천 섹션으로 이동합니다!');
+                            }
+                        }}
+                        className="mt-3 w-full px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-500"
+                    >
+                        💡 AI에게 노드 추천 받기
+                    </button>
+                    <p className="mt-2 text-xs text-gray-500">
+                        💬 원하는 코드의 목적을 설명하고 저장하면, AI가 어떤 노드를 사용해야 하는지 추천해줍니다.
+                    </p>
+                </div>
+
                 {/* 초보자 가이드 */}
                 <BeginnerGuide theme={theme} />
                 
@@ -727,12 +946,14 @@ const LogicEditorPage = ({ selectedLogicId, onBack, onSave, defaultNewLogicName 
                 onClick={() => setShowCodePreview(false)}
             >
                 <div 
-                    className="bg-neutral-900 rounded-2xl border border-neutral-700 shadow-2xl max-w-4xl w-full max-h-[80vh] flex flex-col"
+                    className="bg-neutral-900 rounded-2xl border border-neutral-700 shadow-2xl max-w-5xl w-full max-h-[85vh] flex flex-col"
                     onClick={(e) => e.stopPropagation()}
                 >
                     {/* 모달 헤더 */}
                     <div className="flex items-center justify-between p-6 border-b border-neutral-700">
-                        <h2 className="text-2xl font-bold text-gray-100">🐍 Generated Python Code</h2>
+                        <h2 className="text-2xl font-bold text-gray-100">
+                            {showEnhancedCode && enhancedCode ? '✨ AI 개선 코드' : '🐍 노드 기반 코드'}
+                        </h2>
                         <button 
                             onClick={() => setShowCodePreview(false)}
                             className="text-gray-400 hover:text-gray-200 text-2xl"
@@ -744,33 +965,96 @@ const LogicEditorPage = ({ selectedLogicId, onBack, onSave, defaultNewLogicName 
                     {/* 코드 영역 */}
                     <div className="flex-1 overflow-auto p-6">
                         <pre className="bg-neutral-950 border border-neutral-800 rounded-lg p-4 text-sm text-green-400 font-mono overflow-x-auto">
-                            <code>{generatedCode}</code>
+                            <code>{showEnhancedCode && enhancedCode ? enhancedCode : generatedCode}</code>
                         </pre>
                     </div>
 
+                    {/* AI 개선 상태 표시 */}
+                    {showEnhancedCode && enhancedCode && (
+                        <div className="px-6 pb-3">
+                            <div className="bg-purple-900/20 border border-purple-700/50 rounded-lg p-3">
+                                <p className="text-sm text-purple-300">
+                                    ✨ <strong>AI 개선 완료!</strong> 에러 처리, 로깅, 시각화, 모델 저장 기능이 추가되었습니다.
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
                     {/* 모달 푸터 */}
-                    <div className="flex gap-3 p-6 border-t border-neutral-700">
+                    <div className="flex flex-col gap-3 p-6 border-t border-neutral-700">
+                        {/* 코드 전환 버튼 */}
+                        {enhancedCode && (
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setShowEnhancedCode(false)}
+                                    className={`flex-1 px-4 py-3 text-base font-semibold rounded-lg transition-colors ${
+                                        !showEnhancedCode
+                                            ? 'bg-cyan-600 text-white'
+                                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                    }`}
+                                >
+                                    📄 노드 기반 코드
+                                </button>
+                                <button
+                                    onClick={() => setShowEnhancedCode(true)}
+                                    className={`flex-1 px-4 py-3 text-base font-semibold rounded-lg transition-colors ${
+                                        showEnhancedCode
+                                            ? 'bg-purple-600 text-white'
+                                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                    }`}
+                                >
+                                    ✨ AI 개선 코드
+                                </button>
+                            </div>
+                        )}
+
+                        {/* AI 개선 버튼 (개선 코드가 없을 때만 표시) */}
+                        {!enhancedCode && (
+                            <button
+                                onClick={handleEnhanceCode}
+                                disabled={isEnhancing || !userIntent.trim()}
+                                className={`w-full px-4 py-3 text-base font-semibold text-white rounded-lg transition-colors ${
+                                    isEnhancing || !userIntent.trim()
+                                        ? 'bg-gray-600 cursor-not-allowed'
+                                        : 'bg-purple-600 hover:bg-purple-500'
+                                }`}
+                            >
+                                {isEnhancing ? '🔄 AI 개선 중...' : '✨ AI로 코드 개선하기'}
+                            </button>
+                        )}
+
+                        {/* CSV 다운로드 버튼 */}
                         <button
-                            onClick={() => {
-                                navigator.clipboard.writeText(generatedCode);
-                                toast.success('코드가 클립보드에 복사되었습니다!');
-                            }}
-                            className="flex-1 px-4 py-2 text-base font-semibold text-white bg-purple-600 rounded-lg hover:bg-purple-500"
+                            onClick={handleDownloadCSVFiles}
+                            className="w-full px-4 py-3 text-base font-semibold text-white bg-teal-600 rounded-lg hover:bg-teal-500"
                         >
-                            📋 복사하기
+                            📊 CSV 파일 다운로드
                         </button>
-                        <button
-                            onClick={handleExportJupyter}
-                            className="flex-1 px-4 py-2 text-base font-semibold text-white bg-orange-600 rounded-lg hover:bg-orange-500"
-                        >
-                            📓 Jupyter로 저장
-                        </button>
-                        <button
-                            onClick={handleExportPython}
-                            className="flex-1 px-4 py-2 text-base font-semibold text-white bg-green-600 rounded-lg hover:bg-green-500"
-                        >
-                            📄 .py로 저장
-                        </button>
+
+                        {/* 다운로드 버튼들 */}
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => {
+                                    navigator.clipboard.writeText(showEnhancedCode && enhancedCode ? enhancedCode : generatedCode);
+                                    toast.success('코드가 클립보드에 복사되었습니다!');
+                                }}
+                                className="flex-1 px-4 py-2 text-base font-semibold text-white bg-cyan-600 rounded-lg hover:bg-cyan-500"
+                            >
+                                📋 복사
+                            </button>
+                            <button
+                                onClick={handleExportJupyter}
+                                className="flex-1 px-4 py-2 text-base font-semibold text-white bg-orange-600 rounded-lg hover:bg-orange-500"
+                            >
+                                📓 Jupyter
+                            </button>
+                            <button
+                                onClick={handleExportPython}
+                                className="flex-1 px-4 py-2 text-base font-semibold text-white bg-green-600 rounded-lg hover:bg-green-500"
+                            >
+                                📄 .py
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

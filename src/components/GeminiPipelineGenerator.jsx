@@ -29,6 +29,15 @@ const GeminiPipelineGenerator = ({ onApplyPipeline }) => {
         }
     }, []);
 
+    // 외부에서 프롬프트 설정 이벤트 수신
+    useEffect(() => {
+        const handleSetPrompt = (event) => {
+            setPrompt(event.detail);
+        };
+        window.addEventListener('setGeminiPrompt', handleSetPrompt);
+        return () => window.removeEventListener('setGeminiPrompt', handleSetPrompt);
+    }, []);
+
     const handleSaveApiKey = () => {
         if (!apiKey.trim()) {
             toast.error('API 키를 입력해주세요.');
@@ -90,12 +99,14 @@ const GeminiPipelineGenerator = ({ onApplyPipeline }) => {
     ];
 
     return (
-        <div style={{
-            padding: '20px',
-            backgroundColor: 'var(--bg-secondary)',
-            borderRadius: '8px',
-            marginTop: '20px'
-        }}>
+        <div 
+            data-gemini-generator
+            style={{
+                padding: '20px',
+                backgroundColor: 'var(--bg-secondary)',
+                borderRadius: '8px',
+                marginTop: '20px'
+            }}>
             <div style={{ 
                 display: 'flex', 
                 alignItems: 'center', 
@@ -450,14 +461,43 @@ const GeminiPipelineGenerator = ({ onApplyPipeline }) => {
                                                 {guide.nodeType}
                                             </span>
                                         </div>
-                                        <p style={{
-                                            margin: '6px 0 0 32px',
-                                            fontSize: '13px',
-                                            color: 'var(--text-secondary)',
-                                            lineHeight: '1.5'
+                                        <div style={{
+                                            margin: '6px 0 0 32px'
                                         }}>
-                                            {guide.description}
-                                        </p>
+                                            <p style={{
+                                                margin: 0,
+                                                fontSize: '13px',
+                                                color: 'var(--text-secondary)',
+                                                lineHeight: '1.5'
+                                            }}>
+                                                {guide.description}
+                                            </p>
+                                            {guide.reason && (
+                                                <div style={{
+                                                    marginTop: '8px',
+                                                    padding: '8px 10px',
+                                                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                                    borderLeft: '3px solid #3b82f6',
+                                                    borderRadius: '4px'
+                                                }}>
+                                                    <div style={{
+                                                        fontSize: '11px',
+                                                        fontWeight: '600',
+                                                        color: '#3b82f6',
+                                                        marginBottom: '4px'
+                                                    }}>
+                                                        💡 왜 이 노드를 사용하나요?
+                                                    </div>
+                                                    <div style={{
+                                                        fontSize: '12px',
+                                                        color: 'var(--text-primary)',
+                                                        lineHeight: '1.6'
+                                                    }}>
+                                                        {guide.reason}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
                                         {guide.settings && Object.keys(guide.settings).length > 0 && (
                                             <div style={{
                                                 marginTop: '8px',

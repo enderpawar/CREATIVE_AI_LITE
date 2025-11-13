@@ -559,13 +559,6 @@ function generateImports(nodes: NodeData[]): string {
     imports.add('import pandas as pd')
     imports.add('import numpy as np')
     
-    // dataLoader에서 CSV embedding 사용 시 필요
-    const hasDataLoader = nodes.some(n => n.kind === 'dataLoader')
-    if (hasDataLoader) {
-        imports.add('import io')
-        imports.add('import base64')
-    }
-    
     nodes.forEach(node => {
         switch (node.kind) {
             case 'dataSplit':

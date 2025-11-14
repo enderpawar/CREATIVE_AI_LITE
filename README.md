@@ -4,6 +4,12 @@
 <img width="3837" height="1979" alt="image" src="https://github.com/user-attachments/assets/ce1113d0-1e80-4c39-8a7a-3a38fc020fe8" />
 <img width="2807" height="1969" alt="image" src="https://github.com/user-attachments/assets/65d62a3e-1371-475e-ae65-b3c11e8078ff" />
 <img width="1431" height="1708" alt="image" src="https://github.com/user-attachments/assets/9df427fb-e75f-4d3c-a626-442566b9edfa" />
+노드 구성 및 입력
+<img width="2387" height="1905" alt="image" src="https://github.com/user-attachments/assets/c84376f4-7e50-473a-bbd4-fd84e999bf1a" />
+제출된 코드
+<img width="805" height="1056" alt="image" src="https://github.com/user-attachments/assets/e62fc40d-6c69-4c93-a302-d04512743e98" />
+실제 실행 코드
+<img width="759" height="820" alt="image" src="https://github.com/user-attachments/assets/8d80f8a7-0e67-45f9-b890-11b232251741" />
 
 ## ✨ 주요 기능
 
@@ -140,27 +146,3 @@ VITE_GEMINI_API_KEY=your_api_key_here
 
 MIT License
 
----
-
-> ### 이전 프로젝트 히스토리
-
-본 프로젝트는 Trade Builder 프로젝트에서 시작되어 ML Pipeline Builder로 전환되었습니다.
-
-<details>
-<summary>레거시 문서 보기</summary>
-
-> ### 전체 프로그램 구조도:
-
-![프로그램 구성](public/프로그램%20구상도.png)
-
-> ### 매매 로직 노드 구조도:
-
-![로직 노드 구성](public/로직%20노드%20구성%20v3.png)
-
-> ### 메인 화면: 
-![메인화면](public/실행화면1.png)
-
-> ### 에디터 화면:
-![](public/실행화면2.png)
-
-</details>

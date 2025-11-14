@@ -2,8 +2,47 @@ import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 
 // ---------------------------------------------------------------
+// 타이핑 애니메이션 컴포넌트
+// ---------------------------------------------------------------
+const TypingTitle = ({ pre = 'Turn your ideas into ', highlight = 'ML Pipeline' }) => {
+  const full = pre + highlight;
+  const preLen = pre.length;
+  const fullLen = full.length;
+  const [i, setI] = useState(0);
+
+  useEffect(() => {
+    let idx = 0;
+    const speed = 80;
+    const timer = setInterval(() => {
+      idx += 1;
+      setI(idx);
+      if (idx >= fullLen) {
+        clearInterval(timer);
+      }
+    }, speed);
+    return () => clearInterval(timer);
+  }, [fullLen]);
+
+  const typedPre = pre.slice(0, Math.min(i, preLen));
+  const typedHi = i > preLen ? highlight.slice(0, i - preLen) : '';
+  const done = i >= fullLen;
+
+  return (
+    <h1 className="text-5xl md:text-6xl font-bold mb-6 text-center">
+      <span className="text-gray-100">{typedPre}</span>
+      <span className="bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
+        {typedHi}
+      </span>
+      {!done && (
+        <span className="inline-block w-1 h-12 md:h-16 ml-1 bg-cyan-400 animate-pulse" />
+      )}
+    </h1>
+  );
+};
+
+// ---------------------------------------------------------------
 // AssetPage: 개선된 로직 목록 페이지
-// ----------------------------------------------------------------
+// ---------------------------------------------------------------
 const AssetPage = ({
   logics,
   onLogicClick,
@@ -11,12 +50,21 @@ const AssetPage = ({
   onReorderLogics,
   onCreateLogic
 }) => {
+  // 초기 상태를 로직 개수에 따라 설정 (깜빡임 방지)
+  const [showLanding, setShowLanding] = useState(logics.length === 0);
   const [openedMenuId, setOpenedMenuId] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [editingValue, setEditingValue] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('order'); // 'order', 'name', 'date'
   const [viewMode, setViewMode] = useState('list'); // 'list', 'grid'
+
+  // 로직이 있으면 랜딩 화면 자동으로 건너뛰기 (제거 - 초기 상태에서 이미 처리됨)
+  // useEffect(() => {
+  //   if (logics.length > 0) {
+  //     setShowLanding(false);
+  //   }
+  // }, [logics.length]);
 
   // 검색 및 정렬된 로직 목록
   const filteredAndSortedLogics = React.useMemo(() => {
@@ -100,6 +148,64 @@ const AssetPage = ({
     onLogicClick(logicId);
   };
 
+  // 랜딩 화면
+  if (showLanding) {
+    return (
+      <div className="w-full min-h-screen flex items-center justify-center p-8 relative overflow-hidden">
+        {/* 배경 그라디언트 효과 */}
+        <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 via-blue-500/5 to-purple-500/10"></div>
+        <div className="absolute top-20 left-20 w-96 h-96 bg-cyan-500/20 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-20 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+        
+        {/* 메인 콘텐츠 */}
+        <div className="relative z-10 max-w-4xl mx-auto text-center">
+          <TypingTitle />
+          
+          <p className="text-xl text-gray-400 mb-12 max-w-2xl mx-auto">
+            노드 기반 시각적 ML 파이프라인 빌더로 복잡한 머신러닝 워크플로우를 쉽게 구축하세요
+          </p>
+          
+          {/* Start 버튼 */}
+          <button
+            onClick={() => setShowLanding(false)}
+            className="group relative px-12 py-5 text-xl font-bold text-white rounded-2xl cursor-pointer transition-all duration-500 overflow-hidden
+            bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 
+            shadow-[0_20px_60px_-15px_rgba(34,211,238,0.6)] hover:shadow-[0_25px_70px_-15px_rgba(34,211,238,0.8)] 
+            hover:-translate-y-2 active:scale-95"
+          >
+            {/* 배경 애니메이션 */}
+            <div className="absolute inset-0 bg-gradient-to-r from-purple-600/0 via-purple-600/30 to-purple-600/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+            
+            <div className="relative z-10 flex items-center gap-3">
+              <span>Start Building</span>
+              <span className="text-2xl transform group-hover:translate-x-2 transition-transform duration-300">→</span>
+            </div>
+          </button>
+          
+          {/* 추가 정보 */}
+          <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto">
+            {[
+              { icon: '🎯', title: '직관적 인터페이스', desc: '드래그 & 드롭으로 쉽게' },
+              { icon: '⚡', title: '빠른 프로토타이핑', desc: 'Python 코드 자동 생성' },
+              { icon: '🤖', title: 'AI 지원', desc: 'Gemini로 노드 추천' }
+            ].map((feature, idx) => (
+              <div 
+                key={idx}
+                className="p-6 rounded-xl themed-card border border-neutral-800/50 hover:border-cyan-500/40 transition-all duration-300"
+                style={{ animationDelay: `${idx * 200}ms` }}
+              >
+                <div className="text-4xl mb-3">{feature.icon}</div>
+                <h3 className="text-lg font-semibold text-cyan-400 mb-2">{feature.title}</h3>
+                <p className="text-sm text-gray-500">{feature.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 메인 페이지
   return (
     <div className="w-full max-w-6xl p-8 rounded-3xl shadow-2xl themed-card border border-neutral-800/70">
       {/* 헤더 카드 - 그라디언트 배경과 글로우 효과 */}

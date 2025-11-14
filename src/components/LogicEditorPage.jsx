@@ -7,7 +7,6 @@ import { generatePythonCode, generateJupyterNotebook, generatePythonScript } fro
 import { enhanceCodeWithAI } from '../utils/geminiPipeline';
 import CSVDataManager from './CSVDataManager.jsx';
 import GeminiPipelineGenerator from './GeminiPipelineGenerator.jsx';
-import BeginnerGuide from './BeginnerGuide.jsx';
 
 // ----------------------------------------------------------------
 // LogicEditorPage: ML 파이프라인을 편집하는 컴포넌트
@@ -895,8 +894,8 @@ ${logicName || 'ML Pipeline'}
                     <textarea
                         value={userIntent}
                         onChange={(e) => setUserIntent(e.target.value)}
-                        placeholder="예: 아이리스 데이터셋으로 꽃 종류를 분류하고, 모델을 저장하고 싶습니다."
-                        rows={4}
+                        placeholder="상세히 작성할수록 정확한 코드가 생성됩니다:&#10;&#10;• 데이터: class_score_en.csv (midterm 컬럼으로 final 예측)&#10;• 목표: 선형회귀로 성적 예측&#10;• 금지: sklearn.LinearRegression 사용 금지 (numpy.linalg.pinv 사용)&#10;• 출력: class_score_predict.png 파일로 시각화&#10;• 기타: matplotlib으로 scatter plot 생성"
+                        rows={6}
                         className="w-full p-3 bg-neutral-900 rounded border border-neutral-800 text-sm text-gray-300 resize-vertical"
                         style={{ fontFamily: 'inherit' }}
                     />
@@ -920,14 +919,17 @@ ${logicName || 'ML Pipeline'}
                     >
                         💡 AI에게 노드 추천 받기
                     </button>
-                    <p className="mt-2 text-xs text-gray-500">
-                        💬 원하는 코드의 목적을 설명하고 저장하면, AI가 어떤 노드를 사용해야 하는지 추천해줍니다.
-                    </p>
+                    <div className="mt-3 p-3 bg-blue-900/20 border border-blue-700/30 rounded-lg">
+                        <p className="text-xs text-blue-300 font-semibold mb-2">📝 작성 팁:</p>
+                        <ul className="text-xs text-gray-400 space-y-1">
+                            <li>• <span className="text-blue-400">데이터</span>: CSV 파일명, 컬럼명</li>
+                            <li>• <span className="text-green-400">목표</span>: 분류/회귀/클러스터링</li>
+                            <li>• <span className="text-red-400">금지</span>: 사용 금지 라이브러리</li>
+                            <li>• <span className="text-yellow-400">출력</span>: 저장할 파일명</li>
+                        </ul>
+                    </div>
                 </div>
 
-                {/* 초보자 가이드 */}
-                <BeginnerGuide theme={theme} />
-                
                 {/* Gemini AI Python 코드 생성기 */}
                 <GeminiPipelineGenerator onApplyPipeline={applyPipelineToCanvas} />
                 

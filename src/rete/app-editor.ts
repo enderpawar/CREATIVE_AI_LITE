@@ -93,11 +93,9 @@ export class DataLoaderNode extends TradeNode {
 export class DataSplitNode extends TradeNode {
     constructor() {
         super('Data Split')
-        this.addInput('data', new ClassicPreset.Input(numberSocket, 'data'))
-        this.addOutput('X_train', new ClassicPreset.Output(numberSocket, 'X_train'))
-        this.addOutput('y_train', new ClassicPreset.Output(numberSocket, 'y_train'))
-        this.addOutput('X_test', new ClassicPreset.Output(numberSocket, 'X_test'))
-        this.addOutput('y_test', new ClassicPreset.Output(numberSocket, 'y_test'))
+        this.addInput('data', new ClassicPreset.Input(numberSocket, '데이터'))
+        this.addOutput('train', new ClassicPreset.Output(numberSocket, '훈련용'))
+        this.addOutput('test', new ClassicPreset.Output(numberSocket, '테스트용'))
         this.addControl('targetColumn', new ClassicPreset.InputControl('text', { initial: 'target' }))
         this.addControl('ratio', new ClassicPreset.InputControl('number', { initial: 0.8 }))
         this.kind = 'dataSplit'
@@ -112,10 +110,8 @@ export class DataSplitNode extends TradeNode {
 export class ScalerNode extends TradeNode {
     constructor() {
         super('Scaler')
-        this.addInput('X_train', new ClassicPreset.Input(numberSocket, 'X_train'))
-        this.addInput('X_test', new ClassicPreset.Input(numberSocket, 'X_test'))
-        this.addOutput('X_train', new ClassicPreset.Output(numberSocket, 'X_train'))
-        this.addOutput('X_test', new ClassicPreset.Output(numberSocket, 'X_test'))
+        this.addInput('data', new ClassicPreset.Input(numberSocket, '데이터'))
+        this.addOutput('data', new ClassicPreset.Output(numberSocket, '데이터'))
         
         // Scaler 방법 드롭다운
         const scalerOptions = [
@@ -137,9 +133,8 @@ export class ScalerNode extends TradeNode {
 export class FeatureSelectionNode extends TradeNode {
     constructor() {
         super('Feature Selection')
-        this.addInput('X_train', new ClassicPreset.Input(numberSocket, 'X_train'))
-        this.addInput('y_train', new ClassicPreset.Input(numberSocket, 'y_train'))
-        this.addOutput('X_train', new ClassicPreset.Output(numberSocket, 'X_train'))
+        this.addInput('data', new ClassicPreset.Input(numberSocket, '데이터'))
+        this.addOutput('data', new ClassicPreset.Output(numberSocket, '데이터'))
         this.addControl('method', new ClassicPreset.InputControl('text', { initial: 'SelectKBest' }))
         this.addControl('k', new ClassicPreset.InputControl('number', { initial: 10 }))
         this.kind = 'featureSelection'
@@ -150,9 +145,8 @@ export class FeatureSelectionNode extends TradeNode {
 export class ClassifierNode extends TradeNode {
     constructor() {
         super('Classifier')
-        this.addInput('X_train', new ClassicPreset.Input(numberSocket, 'X_train'))
-        this.addInput('y_train', new ClassicPreset.Input(numberSocket, 'y_train'))
-        this.addOutput('model', new ClassicPreset.Output(numberSocket, 'model'))
+        this.addInput('train', new ClassicPreset.Input(numberSocket, '훈련용'))
+        this.addOutput('model', new ClassicPreset.Output(numberSocket, '모델'))
         
         // 분류 알고리즘 드롭다운
         const algorithmOptions = [
@@ -178,9 +172,8 @@ export class ClassifierNode extends TradeNode {
 export class RegressorNode extends TradeNode {
     constructor() {
         super('Regressor')
-        this.addInput('X_train', new ClassicPreset.Input(numberSocket, 'X_train'))
-        this.addInput('y_train', new ClassicPreset.Input(numberSocket, 'y_train'))
-        this.addOutput('model', new ClassicPreset.Output(numberSocket, 'model'))
+        this.addInput('train', new ClassicPreset.Input(numberSocket, '훈련용'))
+        this.addOutput('model', new ClassicPreset.Output(numberSocket, '모델'))
         
         // 회귀 알고리즘 드롭다운
         const algorithmOptions = [
@@ -204,9 +197,8 @@ export class RegressorNode extends TradeNode {
 export class NeuralNetNode extends TradeNode {
     constructor() {
         super('Neural Network')
-        this.addInput('X_train', new ClassicPreset.Input(numberSocket, 'X_train'))
-        this.addInput('y_train', new ClassicPreset.Input(numberSocket, 'y_train'))
-        this.addOutput('model', new ClassicPreset.Output(numberSocket, 'model'))
+        this.addInput('train', new ClassicPreset.Input(numberSocket, '훈련용'))
+        this.addOutput('model', new ClassicPreset.Output(numberSocket, '모델'))
         this.addControl('layers', new ClassicPreset.InputControl('text', { initial: '64,32' }))
         this.addControl('epochs', new ClassicPreset.InputControl('number', { initial: 50 }))
         this.kind = 'neuralNet'
@@ -217,10 +209,9 @@ export class NeuralNetNode extends TradeNode {
 export class EvaluateNode extends TradeNode {
     constructor() {
         super('Evaluate')
-        this.addInput('model', new ClassicPreset.Input(numberSocket, 'model'))
-        this.addInput('X_test', new ClassicPreset.Input(numberSocket, 'X_test'))
-        this.addInput('y_test', new ClassicPreset.Input(numberSocket, 'y_test'))
-        this.addInput('prediction', new ClassicPreset.Input(numberSocket, 'prediction'))
+        this.addInput('prediction', new ClassicPreset.Input(numberSocket, '예측결과'))
+        this.addInput('test', new ClassicPreset.Input(numberSocket, '테스트용'))
+        this.addOutput('metrics', new ClassicPreset.Output(numberSocket, '평가결과'))
         this.kind = 'evaluate'
         this.category = 'ml-evaluation'
     }
@@ -229,9 +220,9 @@ export class EvaluateNode extends TradeNode {
 export class PredictNode extends TradeNode {
     constructor() {
         super('Predict')
-        this.addInput('model', new ClassicPreset.Input(numberSocket, 'model'))
-        this.addInput('X_test', new ClassicPreset.Input(numberSocket, 'X_test'))
-        this.addOutput('prediction', new ClassicPreset.Output(numberSocket, 'prediction'))
+        this.addInput('model', new ClassicPreset.Input(numberSocket, '모델'))
+        this.addInput('test', new ClassicPreset.Input(numberSocket, '테스트용'))
+        this.addOutput('prediction', new ClassicPreset.Output(numberSocket, '예측결과'))
         this.kind = 'predict'
         this.category = 'ml-prediction'
     }
@@ -240,9 +231,8 @@ export class PredictNode extends TradeNode {
 export class HyperparamTuneNode extends TradeNode {
     constructor() {
         super('Hyperparameter Tuning')
-        this.addInput('X_train', new ClassicPreset.Input(numberSocket, 'X_train'))
-        this.addInput('y_train', new ClassicPreset.Input(numberSocket, 'y_train'))
-        this.addOutput('model', new ClassicPreset.Output(numberSocket, 'model'))
+        this.addInput('train', new ClassicPreset.Input(numberSocket, '훈련용'))
+        this.addOutput('model', new ClassicPreset.Output(numberSocket, '모델'))
         this.addControl('method', new ClassicPreset.InputControl('text', { initial: 'GridSearch' }))
         this.kind = 'hyperparamTune'
         this.category = 'ml-optimization'

@@ -565,7 +565,7 @@ const LogicEditorPage = ({ selectedLogicId, onBack, onSave, defaultNewLogicName 
     }, [editorRef, areaRef, toast]);
 
   return (
-    <div className="w-full max-w-[1900px] p-4 sm:p-6 lg:p-8 rounded-3xl shadow-2xl flex flex-col bg-neutral-950 text-gray-200 border border-neutral-800/70">
+    <div className="w-full max-w-[2400px] p-4 sm:p-6 lg:p-8 rounded-3xl shadow-2xl flex flex-col bg-neutral-950 text-gray-200 border border-neutral-800/70">
         {/* 상단 헤더: 로직 이름 수정 및 거래소/종목 선택 + 저장/뒤로가기 버튼 */}
     <div className="flex items-center justify-between pb-4 border-b border-neutral-800">
             <input 

@@ -295,7 +295,7 @@ const GeminiPipelineGenerator = ({ onApplyPipeline }) => {
                         {isGenerating ? '🔄 생성 중...' : '✨ AI로 코드 생성하기'}
                     </button>
 
-                    {/* 캔버스에 적용 버튼 */}
+                    {/* 캔버스에 적용 버튼
                     {nodeGuide.length > 0 && onApplyPipeline && (
                         <button
                             onClick={() => {
@@ -325,7 +325,7 @@ const GeminiPipelineGenerator = ({ onApplyPipeline }) => {
                         >
                             🎨 캔버스에 적용하기
                         </button>
-                    )}
+                    )} */}
 
                     {/* 노드 배치 가이드 */}
                     {nodeGuide.length > 0 && (
@@ -648,7 +648,7 @@ const GeminiPipelineGenerator = ({ onApplyPipeline }) => {
                         </div>
                     )}
 
-                    {/* 생성된 코드 표시 */}
+                    {/* 생성된 코드 표시
                     {generatedCode && (
                         <div style={{
                             backgroundColor: 'var(--bg-primary)',
@@ -701,7 +701,7 @@ const GeminiPipelineGenerator = ({ onApplyPipeline }) => {
                                 <code>{generatedCode}</code>
                             </pre>
                         </div>
-                    )}
+                    )} */}
                 </>
             )}
         </div>

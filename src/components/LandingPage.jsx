@@ -78,7 +78,8 @@ const LandingPage = ({ onStart }) => {
         <TypingTitle />
         
         <p className="text-xl text-gray-400 mb-12 max-w-2xl mx-auto">
-          노드 기반 시각적 ML 파이프라인 빌더로 복잡한 머신러닝 워크플로우를 쉽게 구축하세요
+          노드 기반 시각적 ML 파이프라인 빌더로 복잡한 머신러닝 워크플로우를 <br>
+        </br>쉽게 구축하세요
         </p>
         
         {/* Start 버튼 */}

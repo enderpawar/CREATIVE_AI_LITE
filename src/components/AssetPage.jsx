@@ -16,37 +16,20 @@ const AssetPage = ({
   const [editingId, setEditingId] = useState(null);
   const [editingValue, setEditingValue] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState('order'); // 'order', 'name', 'date'
-  const [viewMode, setViewMode] = useState('list'); // 'list', 'grid'
 
-  // 검색 및 정렬된 로직 목록
-  const filteredAndSortedLogics = React.useMemo(() => {
-    let filtered = logics.filter(logic => 
+  // 검색된 로직 목록
+  const filteredLogics = React.useMemo(() => {
+    return logics.filter(logic => 
       logic.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
-
-    if (sortBy === 'name') {
-      filtered = [...filtered].sort((a, b) => a.name.localeCompare(b.name));
-    } else if (sortBy === 'date') {
-      filtered = [...filtered].sort((a, b) => {
-        // ID에서 타임스탬프 추출 (logic-{timestamp}-{random})
-        const getTimestamp = (id) => {
-          const match = id.match(/logic-(\d+)-/);
-          return match ? parseInt(match[1]) : 0;
-        };
-        return getTimestamp(b.id) - getTimestamp(a.id);
-      });
-    }
-    
-    return filtered;
-  }, [logics, searchQuery, sortBy]);
+  }, [logics, searchQuery]);
 
   // 드래그 앤 드롭 순서 변경 핸들러
   const handleDragEnd = (result) => {
     if (!result.destination) return;
     
-    // 검색/정렬 중에는 순서 변경 불가
-    if (searchQuery || sortBy !== 'order') return;
+    // 검색 중에는 순서 변경 불가
+    if (searchQuery) return;
     
     const items = Array.from(logics);
     const [reorderedItem] = items.splice(result.source.index, 1);
@@ -115,86 +98,46 @@ const AssetPage = ({
         <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none"></div>
         
         <div className="relative z-10">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-gradient-to-br from-cyan-400 via-blue-500 to-purple-500 rounded-xl flex items-center justify-center shadow-lg shadow-cyan-500/30 relative overflow-hidden">
-                {/* ML 로고 */}
-                <svg viewBox="0 0 100 100" className="w-8 h-8">
-                  {/* 노드 연결 */}
-                  <ellipse cx="50" cy="50" rx="35" ry="20" fill="none" stroke="#67e8f9" strokeWidth="2" opacity="0.6"/>
-                  {/* 원형 노드 */}
-                  <circle cx="25" cy="50" r="8" fill="white"/>
-                  {/* 사각형 노드 */}
-                  <rect x="42" y="42" width="16" height="16" fill="white"/>
-                  {/* 삼각형 노드 */}
-                  <path d="M75 58 L83 42 L67 42 Z" fill="white"/>
-                  {/* 무한대 기호 */}
-                  <text x="50" y="82" fontSize="16" fill="white" textAnchor="middle" fontWeight="bold">∞</text>
-                </svg>
-              </div>
-              <h2 className="text-2xl font-bold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent tracking-tight">
-                CREATIVE AI
-              </h2>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-cyan-400 via-blue-500 to-purple-500 rounded-xl flex items-center justify-center shadow-lg shadow-cyan-500/30 relative overflow-hidden">
+              {/* ML 로고 */}
+              <svg viewBox="0 0 100 100" className="w-8 h-8">
+                {/* 노드 연결 */}
+                <ellipse cx="50" cy="50" rx="35" ry="20" fill="none" stroke="#67e8f9" strokeWidth="2" opacity="0.6"/>
+                {/* 원형 노드 */}
+                <circle cx="25" cy="50" r="8" fill="white"/>
+                {/* 사각형 노드 */}
+                <rect x="42" y="42" width="16" height="16" fill="white"/>
+                {/* 삼각형 노드 */}
+                <path d="M75 58 L83 42 L67 42 Z" fill="white"/>
+                {/* 무한대 기호 */}
+                <text x="50" y="82" fontSize="16" fill="white" textAnchor="middle" fontWeight="bold">∞</text>
+              </svg>
             </div>
-            
-            {/* 뷰 모드 전환 - 개선된 디자인 */}
-            <div className="flex gap-2 p-1.5 rounded-lg border border-neutral-700/50" style={{ backgroundColor: 'var(--control-bg)' }}>
-              <button
-                onClick={() => setViewMode('list')}
-                className={`px-4 py-2 text-sm rounded-md transition-all duration-200 ${
-                  viewMode === 'list' 
-                    ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/30' 
-                    : 'text-gray-400 hover:text-gray-200 hover:bg-neutral-800'
-                }`}
-                title="리스트 뷰"
-              >
-                <span className="mr-1">☰</span> 리스트
-              </button>
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`px-4 py-2 text-sm rounded-md transition-all duration-200 ${
-                  viewMode === 'grid' 
-                    ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/30' 
-                    : 'text-gray-400 hover:text-gray-200 hover:bg-neutral-800'
-                }`}
-                title="그리드 뷰"
-              >
-                <span className="mr-1">⊞</span> 그리드
-              </button>
-            </div>
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent tracking-tight">
+              CREATIVE AI
+            </h2>
           </div>
 
-          {/* 검색 및 정렬 - 개선된 디자인 */}
-          <div className="flex flex-col sm:flex-row gap-3 mb-4">
-            <div className="relative flex-1">
-              <input
-                type="text"
-                placeholder="로직 검색..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 text-sm border border-neutral-700/50 rounded-lg focus:ring-2 focus:ring-cyan-400/40 focus:border-cyan-400/50 outline-none transition-all"
-                style={{ backgroundColor: 'var(--control-bg)', color: 'var(--text-primary)' }}
-              />
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">🔍</span>
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="px-4 py-2.5 text-sm border border-neutral-700/50 rounded-lg focus:ring-2 focus:ring-cyan-400/40 outline-none transition-all cursor-pointer"
+          {/* 검색 */}
+          <div className="relative mb-4">
+            <input
+              type="text"
+              placeholder="로직 검색..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 text-sm border border-neutral-700/50 rounded-lg focus:ring-2 focus:ring-cyan-400/40 focus:border-cyan-400/50 outline-none transition-all"
               style={{ backgroundColor: 'var(--control-bg)', color: 'var(--text-primary)' }}
-            >
-              <option value="order">📌 기본 순서 (드래그 가능)</option>
-              <option value="name">🔤 이름순 (드래그 불가)</option>
-              <option value="date">🕒 최신순 (드래그 불가)</option>
-            </select>
+            />
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">🔍</span>
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition"
+              >
+                ✕
+              </button>
+            )}
           </div>
 
           <div className="flex items-center gap-2 text-sm text-gray-400">
@@ -203,7 +146,7 @@ const AssetPage = ({
             </div>
             {searchQuery && (
               <div className="px-3 py-1.5 bg-cyan-500/10 rounded-lg border border-cyan-500/30">
-                검색 결과: <span className="font-semibold text-cyan-400">{filteredAndSortedLogics.length}</span>
+                검색 결과: <span className="font-semibold text-cyan-400">{filteredLogics.length}</span>
               </div>
             )}
           </div>
@@ -381,7 +324,7 @@ const AssetPage = ({
 
       <DragDropContext onDragEnd={handleDragEnd}>
         <Droppable droppableId="logic-list" renderClone={(provided, snapshot, rubric) => {
-          const logic = filteredAndSortedLogics[rubric.source.index];
+          const logic = filteredLogics[rubric.source.index];
           return (
             <div
               ref={provided.innerRef}
@@ -403,21 +346,18 @@ const AssetPage = ({
         }}>
           {(provided) => (
             <div 
-              className={viewMode === 'grid' 
-                ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' 
-                : 'flex flex-col gap-3'
-              } 
+              className="flex flex-col gap-3"
               ref={provided.innerRef} 
               {...provided.droppableProps}
             >
-              {filteredAndSortedLogics.length > 0 ? (
-                filteredAndSortedLogics.map((logic, index) => (
+              {filteredLogics.length > 0 ? (
+                filteredLogics.map((logic, index) => (
                   // wrapper: 외곽 윤곽선은 ring으로 강조하고, 내부 경계선 색은 유지
                   <div key={logic.id} className="flex flex-col group rounded-xl ring-1 ring-transparent hover:ring-cyan-500/40 transition-all duration-300">
                     <Draggable 
                       draggableId={logic.id} 
                       index={index} 
-                      isDragDisabled={logic.id === editingId || searchQuery !== '' || sortBy !== 'order'}
+                      isDragDisabled={logic.id === editingId || searchQuery !== ''}
                     >
                       {(provided, snapshot) => (
                         <div

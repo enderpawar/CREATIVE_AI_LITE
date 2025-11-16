@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 
 // ---------------------------------------------------------------
-// AssetPage: 로직 목록 페이지
+// LogicListPage: 로직 목록 페이지
 // ---------------------------------------------------------------
-const AssetPage = ({
+const LogicListPage = ({
   logics,
   onLogicClick,
   onDeleteLogic,
@@ -511,5 +511,5 @@ const AssetPage = ({
   );
 };
 
-export default AssetPage;
+export default LogicListPage;
 

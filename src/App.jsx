@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import LandingPage from './components/LandingPage';
-import AssetPage from './components/AssetPage';
+import LogicListPage from './components/LogicListPage';
 import LogicEditorPage from './components/LogicEditorPage';
 import {
   listLogics,
@@ -62,7 +62,7 @@ const App = () => {
     setCurrentPage('editor');
   };
 
-  const handleBackToAssetPage = () => {
+  const handleBackToLogicList = () => {
     setCurrentPage('asset');
     setSelectedLogicId(null);
     setNewLogicName('');
@@ -122,7 +122,7 @@ const App = () => {
       {currentPage === 'landing' ? (
         <LandingPage onStart={() => setCurrentPage('asset')} />
       ) : currentPage === 'asset' ? (
-        <AssetPage
+        <LogicListPage
           logics={logics}
           onLogicClick={handleLogicClick}
           onAddNewLogic={handleAddNewLogic}
@@ -155,7 +155,7 @@ const App = () => {
       ) : (
         <LogicEditorPage
           selectedLogicId={selectedLogicId}
-          onBack={handleBackToAssetPage}
+          onBack={handleBackToLogicList}
           onSave={handleSaveLogic}
           defaultNewLogicName={newLogicName}
           theme={theme}

@@ -323,7 +323,7 @@ const LogicListPage = ({
       </div>
 
       {/* 로직 목록 영역 - 스크롤 가능 */}
-      <div className="flex-1 overflow-y-auto pr-2 mb-6" style={{ minHeight: '300px' }}>
+      <div className="overflow-y-auto pr-2" style={{ maxHeight: '50vh' }}>
         <DragDropContext onDragEnd={handleDragEnd}>
           <Droppable droppableId="logic-list" renderClone={(provided, snapshot, rubric) => {
           const logic = filteredLogics[rubric.source.index];
@@ -495,7 +495,7 @@ const LogicListPage = ({
       
       {/* 새 로직 추가 버튼 - 개선된 디자인 */}
       <button
-        className="group relative flex items-center justify-center w-full p-5 mt-6 text-lg font-bold text-white rounded-xl cursor-pointer transition-all duration-300 overflow-hidden
+        className="group relative flex items-center justify-center w-full p-5 mt-4 text-lg font-bold text-white rounded-xl cursor-pointer transition-all duration-300 overflow-hidden flex-shrink-0
         bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 
         shadow-[0_10px_40px_-10px_rgba(34,211,238,0.6)] hover:shadow-[0_15px_50px_-10px_rgba(34,211,238,0.8)] 
         hover:-translate-y-1 active:scale-95"

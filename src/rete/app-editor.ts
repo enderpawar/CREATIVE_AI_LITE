@@ -539,6 +539,11 @@ export async function createAppEditor(container: HTMLElement): Promise<{
 
         // 1) Shift 드래그: 마퀴 선택
         if (e.shiftKey) {
+            // 메뉴 클릭은 허용 (메뉴 영역에서 발생한 이벤트는 통과)
+            if (menu.contains(e.target as Node)) {
+                return
+            }
+            
             // 캔버스 팬/줌 및 하위 핸들러 차단
             e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation()
 
@@ -554,6 +559,10 @@ export async function createAppEditor(container: HTMLElement): Promise<{
 
             const onMove = (ev: PointerEvent) => {
                 if (!isMarquee) return
+                // 메뉴 영역은 차단하지 않음
+                if (menu.contains(ev.target as Node)) {
+                    return
+                }
                 ev.preventDefault(); ev.stopPropagation(); ev.stopImmediatePropagation()
                 const r = container.getBoundingClientRect()
                 const x = ev.clientX - r.left
@@ -581,6 +590,10 @@ export async function createAppEditor(container: HTMLElement): Promise<{
             }
             const onUp = (ev: PointerEvent) => {
                 if (!isMarquee) return
+                // 메뉴 영역은 차단하지 않음
+                if (menu.contains(ev.target as Node)) {
+                    return
+                }
                 ev.preventDefault(); ev.stopPropagation(); ev.stopImmediatePropagation()
                 isMarquee = false
                 marquee.style.display = 'none'
@@ -635,7 +648,8 @@ export async function createAppEditor(container: HTMLElement): Promise<{
         }
 
         // 3) 빈 영역 클릭: 선택 해제 및 마퀴 윤곽선 숨김
-        if (!node && !e.shiftKey) {
+        // 단, 우클릭 메뉴 영역 클릭은 제외 (붙여넣기 등을 위해)
+        if (!node && !e.shiftKey && !menu.contains(e.target as Node)) {
             selectedNodeIds.clear()
             applySelectionOutline()
             // 마퀴 윤곽선도 숨김
@@ -647,9 +661,13 @@ export async function createAppEditor(container: HTMLElement): Promise<{
         // 그 외 기본 동작(단일 노드 드래그/캔버스 동작)은 통과
     }
     container.addEventListener('pointerdown', onPointerDownCapture, { capture: true })
-    // 마퀴 중일 때 캔버스에 전달되는 포인터 이동도 차단
+    // 마퀴 중일 때 캔버스에 전달되는 포인터 이동도 차단 (메뉴 영역 제외)
     const onContainerPointerMove = (e: PointerEvent) => {
         if (!isMarquee) return
+        // 메뉴 영역은 차단하지 않음
+        if (menu.contains(e.target as Node)) {
+            return
+        }
         e.preventDefault()
         e.stopPropagation()
         e.stopImmediatePropagation()

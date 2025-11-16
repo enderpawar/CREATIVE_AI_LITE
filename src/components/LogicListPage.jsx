@@ -16,7 +16,7 @@ const LogicListPage = ({
   const [editingId, setEditingId] = useState(null);
   const [editingValue, setEditingValue] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const logicListRef = useRef(null);
+  const mainContainerRef = useRef(null);
 
   // 검색된 로직 목록
   const filteredLogics = React.useMemo(() => {
@@ -51,10 +51,10 @@ const LogicListPage = ({
     setEditingId(tempId);
     setEditingValue('');
     
-    // 로직 목록을 맨 아래로 스크롤
+    // 페이지를 맨 아래로 스크롤
     setTimeout(() => {
-      if (logicListRef.current) {
-        logicListRef.current.scrollTop = logicListRef.current.scrollHeight;
+      if (mainContainerRef.current) {
+        mainContainerRef.current.scrollTop = mainContainerRef.current.scrollHeight;
       }
     }, 100);
   };
@@ -98,7 +98,7 @@ const LogicListPage = ({
 
   // 메인 페이지
   return (
-    <div className="w-full max-w-6xl p-8 rounded-3xl shadow-2xl themed-card border border-neutral-800/70 animate-fadeIn flex flex-col overflow-y-auto" style={{ maxHeight: 'calc(100vh - 4rem)' }}>
+    <div ref={mainContainerRef} className="w-full max-w-6xl p-8 rounded-3xl shadow-2xl themed-card border border-neutral-800/70 animate-fadeIn flex flex-col overflow-y-auto" style={{ maxHeight: '95vh' }}>
       {/* 헤더 카드 - 그라디언트 배경과 글로우 효과 */}
       <div className="relative p-6 mb-6 rounded-2xl themed-card border border-neutral-800/70 overflow-hidden flex-shrink-0">
         {/* 배경 그라디언트 효과 */}
@@ -330,8 +330,8 @@ const LogicListPage = ({
         </div>
       </div>
 
-      {/* 로직 목록 영역 - 스크롤 가능 */}
-      <div ref={logicListRef} className="overflow-y-auto pr-2" style={{ maxHeight: '50vh' }}>
+      {/* 로직 목록 영역 */}
+      <div className="overflow-visible pr-2">
         <DragDropContext onDragEnd={handleDragEnd}>
           <Droppable droppableId="logic-list" renderClone={(provided, snapshot, rubric) => {
           const logic = filteredLogics[rubric.source.index];

@@ -605,7 +605,7 @@ Generated on: ${new Date().toLocaleString("ko-KR")}
 This script was created from a visual ML pipeline builder.
 """
 
-`+i}const oR=()=>localStorage.getItem("gemini_api_key");async function iR(n){const a=oR();if(!a)throw new Error("API 키가 설정되지 않았습니다.");const o=`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${a}`,i=`Parse free-form ML description and generate pipeline JSON.
+`+i}const oR=()=>localStorage.getItem("gemini_api_key");async function iR(n){const a=oR();if(!a)throw new Error("API 키가 설정되지 않았습니다.");const o=`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${a}`,i=`Parse free-form ML description and generate pipeline JSON.
 
 USER INPUT (free-form Korean text):
 ${n}

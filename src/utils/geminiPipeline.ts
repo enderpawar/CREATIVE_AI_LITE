@@ -31,245 +31,35 @@ export async function generatePythonCode(userPrompt: string): Promise<CodeGenera
     const apiKey = getApiKey();
     if (!apiKey) throw new Error('API 키가 설정되지 않았습니다.');
 
-    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`;
+    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
     
-    const systemPrompt = `당신은 머신러닝 전문가입니다. 사용자의 요구사항에 맞는 scikit-learn 기반 Python 코드를 생성하고, **초보자를 위한** 노드 기반 에디터에서 구현하기 위한 **상세한 가이드**를 제공해주세요.
+    const systemPrompt = `Parse free-form ML description and generate pipeline JSON.
 
-**🎯 핵심 원칙**:
-1. nodeName은 반드시 "영어이름 (한국어설명)" 형식으로 작성 (예: "Data Loader (데이터 로더)")
-2. 노드 연결 정보를 명확히 포함
-3. **소켓 이름은 초보자가 이해하기 쉬운 한국어 사용** (훈련용, 테스트용, 모델, 예측결과)
-4. 각 노드에 대해 "왜 이 노드를 사용하는지" reason을 **초보자 눈높이**로 설명
+USER INPUT (free-form Korean text):
+${userPrompt}
 
-**출력 형식 (반드시 JSON)**:
+Your task:
+1. Extract: CSV file, columns, target, task type (classification/regression/clustering)
+2. Generate ML pipeline JSON with Korean descriptions (brief)
+
+OUTPUT JSON:
 \`\`\`json
-{
-  "code": "완전한 Python 코드 (X_train, y_train, X_test, y_test 변수 사용)",
-  "nodeGuide": [
-    {
-      "step": 1,
-      "nodeType": "dataLoader",
-      "nodeName": "Data Loader (데이터 로더)",
-      "description": "iris.csv 파일에서 아이리스 데이터를 로드합니다.",
-      "reason": "머신러닝 파이프라인의 첫 단계는 분석할 데이터를 로드하는 것입니다. 이 CSV 파일에는 아이리스 꽃의 꽃받침 길이/너비, 꽃잎 길이/너비와 품종 정보가 들어있습니다.",
-      "settings": { "fileName": "iris.csv" },
-      "connections": {
-        "from": [],
-        "to": [{ "step": 2, "output": "데이터", "input": "데이터" }]
-      }
-    }
-  ]
-}
+{"code":"Python code","nodeGuide":[{"step":1,"nodeType":"dataLoader","nodeName":"Name (한글)","description":"간단설명","reason":"이유","settings":{},"connections":{"from":[],"to":[{"step":2,"output":"data","input":"data"}]}}]}
 \`\`\`
 
-**📋 사용 가능한 노드 타입 및 정확한 소켓 이름**:
+NODES: dataLoader→data, dataSplit:data→train/test, scaler:data→data, classifier/regressor:train→model, predict:model+test→prediction, evaluate:prediction+test→metrics
 
-⚠️ **중요**: 소켓 이름은 아래 표시된 **정확한 영문 이름**을 사용해야 합니다!
+SOCKETS: data,train,test,model,prediction,metrics (English only)
 
-1. **dataLoader** - "Data Loader (데이터 로더)"
-   - 입력: 없음
-   - 출력: **data** (정확한 이름: "data")
-   - settings: { fileName: "파일명.csv" }
+EXAMPLE INPUT:
+"이 시나리오는 대학생의 주간 학습 시간, 수면 시간, 이전 학기 학점을 기반으로 현재 학기의 예상 학점을 예측하는 선형 회귀 문제입니다."
 
-2. **dataSplit** - "Data Split (데이터 분할)"
-   - 입력: **data** (정확한 이름: "data")
-   - 출력: **train**, **test** (정확한 이름: "train", "test")
-   - settings: { ratio: 0.8, targetColumn: "컬럼명" }
-   - 💡 중요: 출력은 정확히 "train"과 "test"입니다
-
-3. **scaler** - "Scaler (정규화)"
-   - 입력: **data** (정확한 이름: "data")
-   - 출력: **data** (정확한 이름: "data")
-   - settings: { method: "StandardScaler" 또는 "MinMaxScaler" }
-   - 💡 훈련용 데이터를 정규화합니다
-
-4. **featureSelection** - "Feature Selection (피처 선택)"
-   - 입력: **data** (정확한 이름: "data")
-   - 출력: **data** (정확한 이름: "data")
-   - settings: { method: "SelectKBest", k: 10 }
-   - 💡 훈련용 데이터에서 중요한 특성만 선택합니다
-
-5. **classifier** - "Classifier (분류 모델)"
-   - 입력: **train** (정확한 이름: "train")
-   - 출력: **model** (정확한 이름: "model")
-   - settings: { algorithm: "RandomForest", n_estimators: 100 }
-   - 💡 훈련용 데이터로 분류 모델을 학습시킵니다
-
-6. **regressor** - "Regressor (회귀 모델)"
-   - 입력: **train** (정확한 이름: "train")
-   - 출력: **model** (정확한 이름: "model")
-   - settings: { algorithm: "LinearRegression" }
-   - 💡 훈련용 데이터로 회귀 모델을 학습시킵니다
-
-7. **neuralNet** - "Neural Network (신경망)"
-   - 입력: **train** (정확한 이름: "train")
-   - 출력: **model** (정확한 이름: "model")
-   - settings: { layers: "64,32", epochs: 50 }
-   - 💡 훈련용 데이터로 신경망을 학습시킵니다
-
-8. **hyperparamTune** - "Hyperparameter Tuning (하이퍼파라미터 튜닝)"
-   - 입력: **train** (정확한 이름: "train")
-   - 출력: **model** (정확한 이름: "model")
-   - settings: {}
-   - 💡 최적의 설정값을 찾아 모델을 학습시킵니다
-
-9. **predict** - "Predict (예측)"
-   - 입력: **model**, **test** (정확한 이름: "model", "test")
-   - 출력: **prediction** (정확한 이름: "prediction")
-   - settings: {}
-   - 💡 학습된 모델로 테스트 데이터에 대한 예측을 수행합니다
-
-10. **evaluate** - "Evaluate (모델 평가)"
-   - 입력: **prediction**, **test** (정확한 이름: "prediction", "test")
-   - 출력: **metrics** (정확한 이름: "metrics")
-   - settings: {}
-   - 💡 예측 결과의 정확도를 측정합니다
-
-**⚠️ 소켓 연결 규칙 (매우 중요!)**:
-- 모든 소켓 이름은 **정확한 영문 이름**을 사용하세요: data, train, test, model, prediction, metrics
-- 한글 이름(데이터, 훈련용 등)은 사용하지 마세요
-- 예시: { "step": 2, "output": "data", "input": "data" } ✅
-- 잘못된 예시: { "step": 2, "output": "데이터", "input": "데이터" } ❌
-
-**완전한 예시 - 아이리스 분류 (정확한 소켓 이름 사용)**:
+EXAMPLE OUTPUT:
 \`\`\`json
-{
-  "code": "# 필요한 라이브러리 import\\nimport pandas as pd\\nimport numpy as np\\nfrom sklearn.model_selection import train_test_split\\nfrom sklearn.preprocessing import StandardScaler\\nfrom sklearn.ensemble import RandomForestClassifier\\nfrom sklearn.metrics import accuracy_score, classification_report\\n\\n# 1. 데이터 로딩\\ndf = pd.read_csv('iris.csv')\\n\\n# 2. 데이터 분할\\nX = df.drop('species', axis=1)\\ny = df['species']\\nX_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)\\n\\n# 3. 정규화\\nscaler = StandardScaler()\\nX_train = scaler.fit_transform(X_train)\\nX_test = scaler.transform(X_test)\\n\\n# 4. 모델 훈련\\nmodel = RandomForestClassifier(n_estimators=100, random_state=42)\\nmodel.fit(X_train, y_train)\\n\\n# 5. 예측\\ny_pred = model.predict(X_test)\\n\\n# 6. 평가\\naccuracy = accuracy_score(y_test, y_pred)\\nprint(f'정확도: {accuracy:.4f}')\\nprint(classification_report(y_test, y_pred))",
-  "nodeGuide": [
-    {
-      "step": 1,
-      "nodeType": "dataLoader",
-      "nodeName": "Data Loader (아이리스 데이터 로더)",
-      "description": "iris.csv 파일에서 아이리스 데이터를 로드합니다.",
-      "reason": "머신러닝의 첫 번째 단계는 데이터를 불러오는 것입니다. 이 CSV 파일에는 아이리스 꽃의 꽃받침 길이/너비, 꽃잎 길이/너비 측정값과 품종 정보가 들어있습니다.",
-      "settings": {
-        "fileName": "iris.csv"
-      },
-      "connections": {
-        "from": [],
-        "to": [
-          { "step": 2, "output": "data", "input": "data" }
-        ]
-      }
-    },
-    {
-      "step": 2,
-      "nodeType": "dataSplit",
-      "nodeName": "Data Split (데이터 분할)",
-      "description": "데이터를 훈련용(80%)과 테스트용(20%)으로 나눕니다.",
-      "reason": "모델이 실제로 얼마나 잘 작동하는지 확인하려면, 일부 데이터는 학습에 사용하고(훈련용), 나머지는 검증용(테스트용)으로 남겨둬야 합니다. 이렇게 하면 모델이 새로운 데이터에서도 잘 작동하는지 확인할 수 있습니다.",
-      "settings": {
-        "ratio": 0.8,
-        "targetColumn": "species"
-      },
-      "connections": {
-        "from": [
-          { "step": 1, "output": "data", "input": "data" }
-        ],
-        "to": [
-          { "step": 3, "output": "train", "input": "data" },
-          { "step": 5, "output": "test", "input": "test" }
-        ]
-      }
-    },
-    {
-      "step": 3,
-      "nodeType": "scaler",
-      "nodeName": "Scaler (표준 정규화)",
-      "description": "StandardScaler로 데이터를 정규화합니다.",
-      "reason": "꽃받침 길이(5-8cm)와 꽃잎 너비(0.1-2.5cm)처럼 값의 범위가 다르면, 큰 숫자가 더 중요해 보일 수 있습니다. 정규화는 모든 값을 같은 기준으로 맞춰서 공정하게 비교할 수 있게 만듭니다.",
-      "settings": {
-        "method": "StandardScaler"
-      },
-      "connections": {
-        "from": [
-          { "step": 2, "output": "train", "input": "data" }
-        ],
-        "to": [
-          { "step": 4, "output": "data", "input": "train" }
-        ]
-      }
-    },
-    {
-      "step": 4,
-      "nodeType": "classifier",
-      "nodeName": "Classifier (랜덤 포레스트 분류기)",
-      "description": "100개의 결정 트리를 사용하는 랜덤 포레스트로 학습합니다.",
-      "reason": "랜덤 포레스트는 100개의 '질문 트리'를 만들어서 투표로 결정하는 방식입니다. 한 개의 트리보다 100개가 투표하면 더 정확한 답을 얻을 수 있습니다. 마치 한 사람 의견보다 100명 의견이 더 믿을 만한 것과 같습니다.",
-      "settings": {
-        "algorithm": "RandomForest",
-        "n_estimators": 100
-      },
-      "connections": {
-        "from": [
-          { "step": 3, "output": "data", "input": "train" }
-        ],
-        "to": [
-          { "step": 5, "output": "model", "input": "model" }
-        ]
-      }
-    },
-    {
-      "step": 5,
-      "nodeType": "predict",
-      "nodeName": "Predict (예측 수행)",
-      "description": "학습된 모델로 테스트 데이터에 대한 예측을 수행합니다.",
-      "reason": "모델이 새로운 꽃을 보고 정말 품종을 맞출 수 있는지 테스트합니다. 학습할 때 보지 못했던 데이터로 시험을 보는 것입니다.",
-      "settings": {},
-      "connections": {
-        "from": [
-          { "step": 4, "output": "model", "input": "model" },
-          { "step": 2, "output": "test", "input": "test" }
-        ],
-        "to": [
-          { "step": 6, "output": "prediction", "input": "prediction" }
-        ]
-      }
-    },
-    {
-      "step": 6,
-      "nodeType": "evaluate",
-      "nodeName": "Evaluate (모델 평가)",
-      "description": "예측 결과의 정확도를 측정하고 상세 리포트를 출력합니다.",
-      "reason": "모델이 얼마나 잘 맞췄는지 점수를 매깁니다. 정확도가 95%라면 100개 중 95개를 맞췄다는 뜻입니다. 또한 어떤 품종을 잘 맞추고 못 맞추는지도 알려줍니다.",
-      "settings": {},
-      "connections": {
-        "from": [
-          { "step": 5, "output": "prediction", "input": "prediction" },
-          { "step": 2, "output": "test", "input": "test" }
-        ],
-        "to": []
-      }
-    }
-  ]
-}
+{"code":"import pandas as pd\\nfrom sklearn.model_selection import train_test_split\\nfrom sklearn.linear_model import LinearRegression\\nfrom sklearn.metrics import mean_squared_error,r2_score\\ndf=pd.read_csv('student_grades.csv')\\nX=df[['주간학습시간','수면시간','이전학기학점']]\\ny=df['현재학기학점']\\nX_train,X_test,y_train,y_test=train_test_split(X,y,test_size=0.2)\\nmodel=LinearRegression()\\nmodel.fit(X_train,y_train)\\ny_pred=model.predict(X_test)\\nprint(f'R2: {r2_score(y_test,y_pred):.4f}')","nodeGuide":[{"step":1,"nodeType":"dataLoader","nodeName":"Loader (로더)","description":"학생 성적 데이터","reason":"데이터 로드","settings":{"fileName":"student_grades.csv"},"connections":{"from":[],"to":[{"step":2,"output":"data","input":"data"}]}},{"step":2,"nodeType":"dataSplit","nodeName":"Split (분할)","description":"80/20 분할","reason":"훈련/테스트","settings":{"ratio":0.8,"targetColumn":"현재학기학점"},"connections":{"from":[{"step":1,"output":"data","input":"data"}],"to":[{"step":3,"output":"train","input":"train"}]}},{"step":3,"nodeType":"regressor","nodeName":"LR (회귀)","description":"선형회귀","reason":"학점 예측","settings":{"algorithm":"LinearRegression"},"connections":{"from":[{"step":2,"output":"train","input":"train"}],"to":[{"step":4,"output":"model","input":"model"}]}},{"step":4,"nodeType":"predict","nodeName":"Predict (예측)","description":"예측","reason":"테스트","settings":{},"connections":{"from":[{"step":3,"output":"model","input":"model"},{"step":2,"output":"test","input":"test"}],"to":[{"step":5,"output":"prediction","input":"prediction"}]}},{"step":5,"nodeType":"evaluate","nodeName":"Eval (평가)","description":"R2/MSE","reason":"성능확인","settings":{},"connections":{"from":[{"step":4,"output":"prediction","input":"prediction"},{"step":2,"output":"test","input":"test"}],"to":[]}}]}
 \`\`\`
 
-**🔑 핵심 연결 규칙 (정확한 소켓 이름 사용!)**:
-- dataLoader의 **data** → dataSplit의 **data**
-- dataSplit의 **train** → Scaler/FeatureSelection → Classifier/Regressor/NeuralNet
-- dataSplit의 **test** → Predict의 **test** / Evaluate의 **test**
-- 모델 노드(Classifier/Regressor)의 **model** → Predict의 **model**
-- Predict의 **prediction** → Evaluate의 **prediction**
-
-**연결 정보 작성 방법 (정확한 소켓 이름 필수!)**:
-- **from**: 이 노드의 입력 소켓에 연결될 이전 노드들
-  - step: 이전 노드의 단계 번호
-  - output: 이전 노드의 출력 소켓 이름 (영문: data, train, test, model, prediction)
-  - input: 현재 노드의 입력 소켓 이름 (영문: data, train, test, model, prediction)
-- **to**: 이 노드의 출력 소켓이 연결될 다음 노드들
-  - step: 다음 노드의 단계 번호
-  - output: 현재 노드의 출력 소켓 이름 (영문: data, train, test, model, prediction)
-  - input: 다음 노드의 입력 소켓 이름 (영문: data, train, test, model, prediction)
-
-**💡 가이드 작성 팁**:
-- **reason 필드는 필수**: 각 노드가 왜 필요한지 초보자 눈높이로 설명 (전문 용어 최소화)
-- **⚠️ 소켓 이름은 반드시 영문 사용**: data, train, test, model, prediction, metrics
-- **연결은 명확하게**: from/to 모두 작성하여 사용자가 어떻게 연결해야 하는지 정확히 알 수 있도록
-
-이제 사용자 요구사항에 맞는 Python 코드와 **초보자를 위한 상세한** 노드 가이드를 JSON 형식으로 생성해주세요.
-
-사용자 요구사항: ${userPrompt}`;
+Parse user's free-form text, infer missing details, generate JSON. Korean text: brief. JSON only.`;
 
     try {
         const response = await fetch(API_URL, {
@@ -279,18 +69,37 @@ export async function generatePythonCode(userPrompt: string): Promise<CodeGenera
                 contents: [{ parts: [{ text: systemPrompt }] }],
                 generationConfig: {
                     temperature: 0.7,
-                    maxOutputTokens: 3072,
+                    maxOutputTokens: 8192,
                 }
             })
         });
 
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`API 오류: ${errorData.error?.message || response.statusText}`);
+            const errorData = await response.json().catch(() => ({}));
+            const errorMessage = errorData.error?.message || response.statusText;
+            
+            // 상태 코드별 처리
+            if (response.status === 503) {
+                throw new Error('⚠️ Gemini API 서버가 과부하 상태입니다.\n잠시 후 다시 시도해주세요.');
+            } else if (response.status === 429) {
+                throw new Error('⚠️ API 요청 한도를 초과했습니다.\n잠시 후 다시 시도하거나 새 API 키를 발급받으세요.');
+            }
+            
+            throw new Error(`API 오류: ${errorMessage}`);
         }
 
         const data = await response.json();
+        console.log('🔍 Gemini API 응답:', data);
+        
         const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        
+        // 응답이 비어있는지 확인
+        if (!text || text.trim() === '') {
+            console.error('❌ 빈 응답 받음. 전체 데이터:', JSON.stringify(data, null, 2));
+            throw new Error('⚠️ Gemini가 빈 응답을 반환했습니다.\n\n가능한 원인:\n1. 프롬프트가 너무 길거나 복잡함\n2. API 서버 불안정\n3. gemini-2.5-flash 모델 문제\n\n💡 해결방법: 더 짧고 명확한 프롬프트로 다시 시도하거나, 잠시 후 다시 시도해주세요.');
+        }
+        
+        console.log('📄 응답 텍스트 길이:', text.length, '첫 200자:', text.substring(0, 200));
         
         // JSON 블록 추출
         let jsonText = text.trim();
@@ -300,16 +109,56 @@ export async function generatePythonCode(userPrompt: string): Promise<CodeGenera
             jsonText = jsonText.replace(/^```\n/, '').replace(/\n```$/, '');
         }
         
-        const result = JSON.parse(jsonText) as CodeGenerationResult;
+        // JSON 유효성 확인
+        if (!jsonText || jsonText.trim() === '') {
+            console.error('❌ JSON 추출 실패. 원본 텍스트:', text.substring(0, 500));
+            throw new Error('응답에서 유효한 JSON을 찾을 수 없습니다.');
+        }
+        
+        // JSON 파싱 (잘린 JSON 복구 시도)
+        let result: CodeGenerationResult;
+        try {
+            result = JSON.parse(jsonText) as CodeGenerationResult;
+            console.log('✅ JSON 파싱 성공:', result);
+        } catch {
+            console.error('❌ JSON 파싱 실패. jsonText:', jsonText.substring(0, 500));
+            
+            // 잘린 JSON 복구 시도
+            if (!jsonText.endsWith('}')) {
+                console.log('🔧 잘린 JSON 감지, 복구 시도...');
+                // 마지막 완전한 노드까지만 사용
+                const lastCompleteNode = jsonText.lastIndexOf('}]}');
+                if (lastCompleteNode > 0) {
+                    const fixedJson = jsonText.substring(0, lastCompleteNode + 3);
+                    try {
+                        result = JSON.parse(fixedJson) as CodeGenerationResult;
+                        console.log('✅ 잘린 JSON 복구 성공');
+                    } catch {
+                        throw new Error('⚠️ 응답이 잘렸습니다.\n\n더 간단한 프롬프트로 다시 시도해주세요.');
+                    }
+                } else {
+                    throw new Error('⚠️ 응답 형식이 올바르지 않습니다.\n\nGemini가 JSON 형식으로 응답하지 않았습니다.');
+                }
+            } else {
+                throw new Error('⚠️ 응답 형식이 올바르지 않습니다.\n\nGemini가 JSON 형식으로 응답하지 않았습니다.');
+            }
+        }
         
         // 기본 검증
         if (!result.code || !result.nodeGuide) {
-            throw new Error('잘못된 응답 형식입니다.');
+            console.error('❌ 필수 필드 누락:', result);
+            throw new Error('응답에 필수 필드(code, nodeGuide)가 없습니다.');
         }
         
         return result;
     } catch (error) {
         console.error('Gemini API 오류:', error);
+        
+        // 이미 포맷된 메시지는 그대로 전달
+        if (error instanceof Error && error.message.includes('⚠️')) {
+            throw error;
+        }
+        
         throw new Error(`코드 생성 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
     }
 }
@@ -345,7 +194,7 @@ export async function enhanceCodeWithAI(generatedCode: string, userIntent: strin
     const apiKey = getApiKey();
     if (!apiKey) throw new Error('API 키가 설정되지 않았습니다.');
 
-    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`;
+    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
     
     const systemPrompt = `당신은 Python 머신러닝 코드 리팩토링 전문가입니다. 
 

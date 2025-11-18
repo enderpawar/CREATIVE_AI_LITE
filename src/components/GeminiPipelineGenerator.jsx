@@ -274,27 +274,44 @@ const GeminiPipelineGenerator = ({ onApplyPipeline, logicId }) => {
                             display: 'block',
                             marginBottom: '8px',
                             fontSize: '14px',
-                            color: 'var(--text-primary)'
+                            color: 'var(--text-primary)',
+                            fontWeight: '600'
                         }}>
-                            원하는 ML 코드를 설명해주세요
+                            원하는 ML 파이프라인을 설명해주세요
                         </label>
                         <textarea
                             value={prompt}
                             onChange={(e) => setPrompt(e.target.value)}
-                            placeholder="예: 아이리스 데이터셋으로 꽃의 종류를 분류하는 랜덤 포레스트 모델을 만들어주세요"
-                            rows={4}
+                            placeholder={"이 시나리오는 대학생의 주간 학습 시간, 수면 시간, 이전 학기 학점을 기반으로 현재 학기의 예상 학점을 예측하는 선형 회귀 문제입니다.\n\n자유롭게 설명하면 AI가 알아서 파싱합니다!"}
+                            rows={6}
                             style={{
                                 width: '100%',
-                                padding: '10px',
-                                fontSize: '14px',
+                                padding: '12px',
+                                fontSize: '13px',
                                 backgroundColor: 'var(--bg-primary)',
                                 color: 'var(--text-primary)',
                                 border: '1px solid var(--border-color)',
                                 borderRadius: '4px',
                                 resize: 'vertical',
-                                fontFamily: 'inherit'
+                                fontFamily: 'inherit',
+                                lineHeight: '1.6'
                             }}
                         />
+                        <div style={{
+                            marginTop: '8px',
+                            padding: '10px',
+                            fontSize: '12px',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            border: '1px solid rgba(59, 130, 246, 0.3)',
+                            borderRadius: '4px',
+                            color: 'var(--text-secondary)'
+                        }}>
+                            <div style={{ fontWeight: '600', color: '#3b82f6', marginBottom: '4px' }}>💡 작성 팁:</div>
+                            <div>• 자유롭게 설명하세요 (AI가 자동으로 파싱)</div>
+                            <div>• CSV 파일명과 컬럼명 언급</div>
+                            <div>• 목표(분류/회귀/클러스터링) 명시</div>
+                            <div>• 선택: 금지 라이브러리, 출력 파일명</div>
+                        </div>
                     </div>
 
                     
